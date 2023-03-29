@@ -9,7 +9,7 @@ Task include:
 
 ## Getting Started
 ### Use quarTeT on Web
-quarTeT can be easily accessed on [our web server](https://www.atcgn.com:8080/quarTeT/home.html).
+quarTeT can be easily accessed on [our web server](http://www.atcgn.com:8080/quarTeT/home.html).
 ### Use quarTeT on local
 quarTeT command-line program is availble for Linux.
 #### Dependencies
