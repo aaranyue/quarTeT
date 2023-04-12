@@ -97,18 +97,24 @@ def GapFiller(args):
             for Laln, Raln in anchorpair:
                 if Laln['strand'] == '-':
                     Laln, Raln = Raln, Laln
-                if Laln['refend'] > Raln['refstart']:
-                    continue
-                score = Laln['identity'] + Raln['identity']
-                if score > bestscore:
-                    fillstart = Laln['refend'] + Laln['qrylen'] - Laln['qryend'] + 1
-                    fillend = Raln['refstart'] - Raln['qrystart']
-                    fillseq = gapfillfasta[Laln['refid']][fillstart-1:fillend]
-                    if len(fillseq) > maxfillinglen or fillseq == '':
+                if Laln['refend'] < Raln['refstart']:
+                    score = Laln['identity'] + Raln['identity']
+                    if score > bestscore:
+                        fillstart = Laln['refend'] + Laln['qrylen'] - Laln['qryend'] + 1
+                        fillend = Raln['refstart'] - Raln['qrystart']
+                        fillseq = gapfillfasta[Laln['refid']][fillstart-1:fillend]
+                        if len(fillseq) > maxfillinglen or fillseq == '':
+                            continue
+                        gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': f'{fillstart}-{fillend}',
+                                                'seq': fillseq if Laln['strand'] == '+' else quartet_util.reversedseq(fillseq), 'strand': Laln['strand'], 
+                                                'score': score}
+                else:
+                    if bestscore != 0:
                         continue
-                    gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': f'{fillstart}-{fillend}',
-                                            'seq': fillseq if Laln['strand'] == '+' else quartet_util.reversedseq(fillseq), 'strand': Laln['strand'], 
-                                            'score': score}
+                    else:
+                        gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': 'join',
+                                                'seq': '', 'strand': '', 
+                                                'score': -1}
     
     print(f'[Info] All files processed.')
     if gapcloserdict == {}:
