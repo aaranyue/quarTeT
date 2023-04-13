@@ -9,7 +9,7 @@ import quartet_util
 
 ### MAIN PROGRAM ###
 def GapFiller(args):
-    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite = args
+    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, fillonly, joinonly = args
 
     # get gap's flanking seq
     print('[Info] Getting gaps flanking sequence...')
@@ -97,7 +97,7 @@ def GapFiller(args):
             for Laln, Raln in anchorpair:
                 if Laln['strand'] == '-':
                     Laln, Raln = Raln, Laln
-                if Laln['refend'] < Raln['refstart']:
+                if Laln['refend'] < Raln['refstart'] and joinonly != True:
                     score = Laln['identity'] + Raln['identity']
                     if score > bestscore:
                         fillstart = Laln['refend'] + Laln['qrylen'] - Laln['qryend'] + 1
@@ -108,7 +108,7 @@ def GapFiller(args):
                         gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': f'{fillstart}-{fillend}',
                                                 'seq': fillseq if Laln['strand'] == '+' else quartet_util.reversedseq(fillseq), 'strand': Laln['strand'], 
                                                 'score': score}
-                else:
+                elif Laln['refend'] >= Raln['refstart'] and fillonly != True:
                     if bestscore != 0:
                         continue
                     else:
@@ -202,6 +202,8 @@ if __name__ == '__main__':
     parser.add_argument('-m', dest='max_filling_len', type=int, default=1000000, help='The max sequence length acceptable to fill any gaps, default: 1000000')
     parser.add_argument('-p', dest='prefix', default='quarTeT', help='The prefix used on generated files, default: quarTeT')
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
+    parser.add_argument('--fillonly', dest='fillonly', action='store_true', default=False, help='Only fill the gaps without join.')
+    parser.add_argument('--joinonly', dest='joinonly', action='store_true', default=False, help='Only join the gaps without fill.')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
 
@@ -220,11 +222,13 @@ if __name__ == '__main__':
     threads = parser.parse_args().threads
     minimapoption = parser.parse_args().minimapoption + f' -t {threads}'
     overwrite = parser.parse_args().overwrite
+    fillonly = parser.parse_args().fillonly
+    joinonly = parser.parse_args().joinonly
 
     # check prerequisites
     quartet_util.check_prerequisite(['minimap2', 'Rscript'])
 
     # run
     args = [draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-            maxfillinglen, prefix, threads, minimapoption, overwrite]
+            maxfillinglen, prefix, threads, minimapoption, overwrite, fillonly, joinonly]
     quartet_util.run(GapFiller, args)
