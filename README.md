@@ -153,7 +153,7 @@ Note that the sequence ID in first column should be consistent with in genome. S
 
 The sequence ontology in the third column should include "LTR" to be recognized.
 ```
-Usage: python3 quartet.py GapFiller <parameters>
+Usage: python3 quartet.py CentroMiner <parameters>
   -h, --help            show this help message and exit
   -i GENOME_FASTA       (*Required) Genome file, FASTA format.
   --TE TE               TE annotation file, gff3 format.
