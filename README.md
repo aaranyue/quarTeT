@@ -107,6 +107,8 @@ Usage: python3 quartet.py GapFiller <parameters>
   -m MAX_FILLING_LEN    The max sequence length acceptable to fill any gaps, default: 1000000
   -p PREFIX             The prefix used on generated files, default: quarTeT
   -t THREADS            Use number of threads, default: 1
+  --fillonly            Only fill the gaps without join.
+  --joinonly            Only join the gaps without fill.
   --overwrite           Overwrite existing alignment file instead of reuse.
   --minimapoption MINIMAPOPTION
                         Pass additional parameters to minimap2 program, default: -x asm5
