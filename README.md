@@ -21,7 +21,7 @@ quarTeT command-line program is availble for Linux.
 - [BLAST+](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (tested on 2.8.1 and 2.11.0) 
 - [tidk](https://github.com/tolkit/telomeric-identifier) (<0.2.31(not include), tested on 0.2.1) 
 - [gnuplot](https://github.com/gnuplot/gnuplot) (tested on 4.6 patchlevel 2 and 6) 
-- [R](https://www.R-project.org/) (tested on 3.6.0) 
+- [R](https://www.R-project.org/) (>3.5.0, tested on 3.6.0 and 4.2.2) 
     - RIdeogram (tested on 0.2.2)
 #### Installation
 quarTeT do not require installation.
