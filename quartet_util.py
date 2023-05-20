@@ -219,7 +219,10 @@ def drawgenome(agpfile, outprefix, centrofile=None, telofile=None):
                     centrodict[chr] = [start, end]
             chrfile.write('Chr\tStart\tEnd\tCE_start\tCE_end\n')
             for chrid in agpblock:
-                chrfile.write(f'{agpblock[chrid][-1][0]}\t1\t{agpblock[chrid][-1][2]}\t{centrodict[chrid][0]}\t{centrodict[chrid][1]}\n')
+                if chrid in centrodict:
+                    chrfile.write(f'{agpblock[chrid][-1][0]}\t1\t{agpblock[chrid][-1][2]}\t{centrodict[chrid][0]}\t{centrodict[chrid][1]}\n')
+                else:
+                    chrfile.write(f'{agpblock[chrid][-1][0]}\t1\t{agpblock[chrid][-1][2]}\t0\t0\n')
     haslabel = False
     with open('label.txt', 'w') as labelfile:   
         labelfile.write('Type\tShape\tChr\tStart\tEnd\tcolor\n')     
