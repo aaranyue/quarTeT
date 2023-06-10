@@ -21,16 +21,18 @@ def teloExplorer(args):
     # check suggested telomere
     with open(f'tmp/{prefix}.txt', 'r') as r:
         con = r.read()
-        if len(con.split()) != 6:
+        if len(con.split()) == 3:
             print(f'[Error] No telomere-like repeats found.')
             sys.exit(0)
-        telorepeat = con.split()[3]
-    if clade == 'plant' and telorepeat not in 'TTTAGGG'*2 and telorepeat not in 'CCCTAAA'*2:
-        print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTTAGGG.')
-    elif clade == 'animal' and telorepeat not in 'TTAGGG'*2 and telorepeat not in 'CCCTAA'*2:
-        print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTAGGG.')
-    else:
-        print(f'[Info] Telomere repeat found is {telorepeat}.')
+        for i in range(3, len(con.split())-1, 3):
+            telorepeat = con.split()[i]
+            if clade == 'plant' and telorepeat not in 'TTTAGGG'*2 and telorepeat not in 'CCCTAAA'*2:
+                print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTTAGGG.')
+            elif clade == 'animal' and telorepeat not in 'TTAGGG'*2 and telorepeat not in 'CCCTAA'*2:
+                print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTAGGG.')
+            else:
+                print(f'[Info] Telomere repeat found is {telorepeat}.')
+                break
         
     # run tidk search
     print('[Info] Running tidk search...')
