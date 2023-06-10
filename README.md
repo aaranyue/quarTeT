@@ -7,6 +7,13 @@ Task include:
 - [TeloExplorer](#TeloExplorer): telomere identification
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
+## Version Change log
+1.0.2 Fix a bug in TeloExplorer that when more than one possible telomere-like repeats are found, it will be considered as no telomere-like repeat found.
+
+1.0.1 Fix a bug in CentroMiner that when no centromere-like region is found on a chromosome, genome overview plotting will unexceptly exit.
+
+1.0.0 Initial release
+
 ## Getting Started
 ### Use quarTeT on Web
 quarTeT can be easily accessed on [our web server](http://www.atcgn.com:8080/quarTeT/home.html).

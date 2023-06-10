@@ -4,6 +4,7 @@ import subprocess
 import sys
 
 usage = '''quarTeT: Telomere-to-telomere Toolkit
+version 1.0.2
 
 Usage: python3 quartet.py <module> <parameters>
 
