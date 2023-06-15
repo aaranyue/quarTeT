@@ -187,6 +187,6 @@ TRgff3/                 | The folder of all tandem repeat hit by BLAST on each c
 ```
 
 ## Citation
-Not published yet.
+Yunzhi Lin, Chen Ye, Xingzhu Li, Qinyao Chen, Ying Wu, Feng Zhang, Rui Pan, Sijia Zhang, Shuxia Chen, Xu Wang, Shuo Cao, Yingzhen Wang, Yi Yue, Yongsheng Liu, Junyang Yue. quarTeT: a telomere-to-telomere toolkit for gap-free genome assembly and centromeric repeat identification. Horticulture Research 2023;X:uhad127, https://doi.org/10.1093/hr/uhad127
 
 
