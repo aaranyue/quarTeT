@@ -257,7 +257,9 @@ chr <- read.table("chr.txt", sep = "\\t", header = T, stringsAsFactors = F)
 ideogram(karyotype = chr)
 convertSVG("chromosome.svg", device = "png")'''
             r.write(RscriptNolabel)
-    subprocess.run(f'Rscript genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    cmdr = subprocess.run(f'Rscript genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    if 'Execution halted' in cmdr.stderr.decode("utf-8"):
+        print(f'[Warning] Figure drawing is failed. This may due to too many gaps.')
     subprocess.run(f'rm chr.txt label.txt genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     subprocess.run(f'mv chromosome.png {outprefix}.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     subprocess.run(f'mv chromosome.svg tmp/{outprefix}.svg', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
