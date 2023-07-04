@@ -8,6 +8,8 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.0.4 Add more report when called programs are failed.
+
 1.0.3 Fix a bug that when figure drawing is failed, there are no warning raised.
 
 1.0.2 Fix a bug in TeloExplorer that when more than one possible telomere-like repeats are found, it will be considered as no telomere-like repeat found.

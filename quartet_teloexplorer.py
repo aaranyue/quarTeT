@@ -16,8 +16,7 @@ def teloExplorer(args):
     # run tidk explore
     telorangedict = {'plant': '-l 7', 'animal': '-l 6', 'other': '-m 5 -x 12'}
     print('[Info] Running tidk explore...')
-    subprocess.run(f'tidk explore -d tmp/ -f {genomefile} -o {prefix} -e tsv {telorangedict[clade]} -t {minrepeattimes}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-
+    quartet_util.runsub(f'tidk explore -d tmp/ -f {genomefile} -o {prefix} -e tsv {telorangedict[clade]} -t {minrepeattimes}', 'tidk explore')
     # check suggested telomere
     with open(f'tmp/{prefix}.txt', 'r') as r:
         con = r.read()
@@ -36,8 +35,7 @@ def teloExplorer(args):
         
     # run tidk search
     print('[Info] Running tidk search...')
-    subprocess.run(f'tidk search -d tmp/ -f {genomefile} -o {prefix} -e csv -s {telorepeat} -w 10000', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-
+    quartet_util.runsub(f'tidk search -d tmp/ -f {genomefile} -o {prefix} -e csv -s {telorepeat} -w 10000', 'tidk search')
     # sort telomere info
     print('[Info] Analysising...')
     with open(f'tmp/{prefix}_telomeric_repeat_windows.csv', 'r') as l:

@@ -31,7 +31,7 @@ def centroMiner(args):
         datfile = f'tmp/trfdat/{prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat'
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
         if not os.path.exists(datfile) or overwrite == True:
-            subprocess.run(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -d -h', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            quartet_util.runsub(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -d -h', 'trf')
         subprocess.run(f'mv -t tmp/trfdat -f {prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         with open(datfile, 'r') as trfResult:
             linelist = []
@@ -52,11 +52,11 @@ def centroMiner(args):
 
         # blast chr with patterns
         clusterfastafile = f'TRfasta/{prefix}.{Chr}.tr.cluster.fasta'
-        subprocess.run(f'cd-hit-est -i {trfastafile} -o {clusterfastafile} -c {identity} -n {wordlength} -S {periodmaxdelta} -M 0', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        quartet_util.runsub(f'cd-hit-est -i {trfastafile} -o {clusterfastafile} -c {identity} -n {wordlength} -S {periodmaxdelta} -M 0', 'cd-hit')
         blastdb = f'tmp/splitchr/{prefix}.{Chr}'
-        subprocess.run(f'makeblastdb -dbtype nucl -in {splitchrfastafile} -out {blastdb}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        quartet_util.runsub(f'makeblastdb -dbtype nucl -in {splitchrfastafile} -out {blastdb}', 'makeblastdb')
         blastresultfile = f'tmp/blast/{prefix}.{Chr}.tr.blast'
-        subprocess.run(f'blastn -db {blastdb} -query {clusterfastafile} -out {blastresultfile} -outfmt 7 -evalue {e}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        quartet_util.runsub(f'blastn -db {blastdb} -query {clusterfastafile} -out {blastresultfile} -outfmt 7 -evalue {e}', 'blastn')
 
         # make gff3
         blastgff3file = f'TRgff3/{prefix}.{Chr}.tr.blast.gff3'

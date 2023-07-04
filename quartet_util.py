@@ -71,14 +71,14 @@ def mummer(reffasta, qryfasta, prefix, suffix, nucmeroption, deltafilteroption, 
     print('[Info] Running MUMmer...')
     subprocess.run(f'mv -t ./ -f tmp/{prefix}.{suffix}.delta', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if not os.path.exists(f'{prefix}.{suffix}.delta') or overwrite == True:
-        subprocess.run(f'nucmer {nucmeroption} -p {prefix}.{suffix} {reffasta} {qryfasta}', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    subprocess.run(f'delta-filter {deltafilteroption} -m -q {prefix}.{suffix}.delta > {prefix}.{suffix}.filter.delta', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    subprocess.run(f'show-coords -T -H {prefix}.{suffix}.filter.delta > {prefix}.{suffix}.coords', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        runsub(f'nucmer {nucmeroption} -p {prefix}.{suffix} {reffasta} {qryfasta}', 'nucmer')
+    runsub(f'delta-filter {deltafilteroption} -m -q {prefix}.{suffix}.delta > {prefix}.{suffix}.filter.delta', 'delta-filter')
+    runsub(f'show-coords -T -H {prefix}.{suffix}.filter.delta > {prefix}.{suffix}.coords', 'show-coords')
     if os.path.getsize(f'{prefix}.{suffix}.coords') == 0:
         print(f'[Error] No alignment found or all alignments are filtered. Recommended to adjust filter arguments.')
         sys.exit(0)
     if plot == True:
-        subprocess.run(f'mummerplot -t png -p {prefix}.{suffix} {prefix}.{suffix}.filter.delta', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        runsub(f'mummerplot -t png -p {prefix}.{suffix} {prefix}.{suffix}.filter.delta', 'mummerplot')
         with open(f'{prefix}.{suffix}.gp', 'r') as gp:
             newgp = ''
             for line in gp:
@@ -86,7 +86,7 @@ def mummer(reffasta, qryfasta, prefix, suffix, nucmeroption, deltafilteroption, 
                 newgp += line
         with open(f'{prefix}.{suffix}.gp', 'w') as gp:
             gp.write(newgp)
-        subprocess.run(f'gnuplot {prefix}.{suffix}.gp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        runsub(f'gnuplot {prefix}.{suffix}.gp', 'gnuplot')
         print(f'[Output] Colinearity graph write to: {prefix}.{suffix}.png')
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     subprocess.run(f'mv -t tmp -f {prefix}.{suffix}.gp {prefix}.{suffix}.fplot {prefix}.{suffix}.rplot {prefix}.{suffix}.delta {prefix}.{suffix}.filter.delta {prefix}.{suffix}.coords', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -156,8 +156,8 @@ def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite):
                         offsets.append(0)
                         offsets = [str(a) for a in offsets]
                         d.write('\n'.join(offsets) + '\n')
-        subprocess.run(f'show-coords -T -H {prefix}.{suffix}.delta > {prefix}.{suffix}.coords', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-        subprocess.run(f'mummerplot -t png -p {prefix}.{suffix} {prefix}.{suffix}.delta', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        runsub(f'show-coords -T -H {prefix}.{suffix}.delta > {prefix}.{suffix}.coords', 'show-coords')
+        runsub(f'mummerplot -t png -p {prefix}.{suffix} {prefix}.{suffix}.delta', 'mummerplot')
         with open(f'{prefix}.{suffix}.gp', 'r') as gp:
             newgp = ''
             for line in gp:
@@ -165,7 +165,7 @@ def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite):
                 newgp += line
         with open(f'{prefix}.{suffix}.gp', 'w') as gp:
             gp.write(newgp)
-        subprocess.run(f'gnuplot {prefix}.{suffix}.gp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        runsub(f'gnuplot {prefix}.{suffix}.gp', 'gnuplot')
         print(f'[Output] Colinearity graph write to: {prefix}.{suffix}.png')
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     subprocess.run(f'mv -t tmp -f {prefix}.{suffix}.gp {prefix}.{suffix}.fplot {prefix}.{suffix}.rplot {prefix}.{suffix}.delta {prefix}.{suffix}.filter.delta {prefix}.{suffix}.paf {prefix}.{suffix}.coords', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -265,3 +265,9 @@ convertSVG("chromosome.svg", device = "png")'''
     subprocess.run(f'mv chromosome.svg tmp/{outprefix}.svg', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     print(f'[Output] Chromosome plot write to: {outprefix}.png')
     
+def runsub(cmd, name):
+    cmdr = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    if cmdr.returncode != 0:
+        print(f'[Error] Unexcepted error occur in {name} as follow:')
+        print(cmdr.stdout.decode("utf-8"))
+        sys.exit(1)
