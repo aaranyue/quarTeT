@@ -9,40 +9,46 @@ import quartet_util
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, plot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
+    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, plot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
     inputdict = quartet_util.readFastaAsDict(qryfile)
     totaldict = inputdict.copy()
     contigsdict = {}
-    for tigid, seq in inputdict.items():
-        if 'N' in seq:
-            i = 1
-            for tig in re.split(r'N+', seq):
-                totaldict[f'{tigid}.{i}'] = tig
-                if len(tig) >= mincontiglength:
-                    contigsdict[f'{tigid}.{i}'] = tig
-                i += 1
-        elif len(seq) >= mincontiglength:
-            contigsdict[tigid] = seq
-    subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    contigfile = f'tmp/{prefix}.contig.fasta'
-    with open(contigfile, 'w') as c:
-        for tigid, seq in contigsdict.items():
-            c.write(f'>{tigid}\n{seq}\n')
+    if nofilter != True:
+        for tigid, seq in inputdict.items():
+            if 'N' in seq:
+                i = 1
+                for tig in re.split(r'N+', seq):
+                    totaldict[f'{tigid}.{i}'] = tig
+                    if len(tig) >= mincontiglength:
+                        contigsdict[f'{tigid}.{i}'] = tig
+                    i += 1
+            elif len(seq) >= mincontiglength:
+                contigsdict[tigid] = seq
+        subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        contigfile = f'tmp/{prefix}.contig.fasta'
+        with open(contigfile, 'w') as c:
+            for tigid, seq in contigsdict.items():
+                c.write(f'>{tigid}\n{seq}\n')
+    else:
+        contigfile = qryfile
+        contigsdict = inputdict
 
     # check telomere in contigs
     print('[Info] Checking telomere in contigs...')
-    subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    telofile = f'tmp/{prefix}.tig.telo.info'
+    if not os.path.exists(telofile):
+        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     monopolize = []
     forceleft = []
     forceright = []
     refdict = quartet_util.readFastaAsDict(refgenomefile)
     minchrlen = min([len(y) for x, y in refdict.items()])
-    if os.path.exists(f'tmp/{prefix}.tig.telo.info'):
-        with open(f'tmp/{prefix}.tig.telo.info', 'r') as telo:
+    if os.path.exists(telofile):
+        with open(telofile, 'r') as telo:
             for line in telo:
                 if line.startswith('#'):
                     continue
@@ -254,6 +260,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', dest='prefix', default='quarTeT', help='The prefix used on generated files, default: quarTeT')
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
     parser.add_argument('-a', dest='aligner', choices=['minimap2', 'mummer'], default='minimap2', help='Specify alignment program (support minimap2 and mummer), default: minimap2')
+    parser.add_argument('--nofilter', dest='nofilter', action='store_true', default=False, help='Use original sequence input, no filtering.')
     parser.add_argument('--plot', dest='plot', action='store_true', default=False, help='Plot a colinearity graph for draft genome to reference alignments. (will cost more time)')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
@@ -271,6 +278,7 @@ if __name__ == '__main__':
     prefix = parser.parse_args().prefix
     threads = parser.parse_args().threads
     aligner = parser.parse_args().aligner
+    nofilter = parser.parse_args().nofilter
     plot = parser.parse_args().plot
     overwrite = parser.parse_args().overwrite
     quartet_util.check_prerequisite(['Rscript', 'delta-filter', 'mummerplot', 'show-coords', 'gnuplot'])
@@ -287,5 +295,5 @@ if __name__ == '__main__':
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, plot, overwrite, nucmeroption, deltafilteroption, minimapoption]
+            prefix, threads, aligner, nofilter, plot, overwrite, nucmeroption, deltafilteroption, minimapoption]
     quartet_util.run(AssemblyMapper, args)
