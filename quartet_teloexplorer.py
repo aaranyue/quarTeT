@@ -16,23 +16,41 @@ def teloExplorer(args):
     # run tidk explore
     telorangedict = {'plant': '-l 7', 'animal': '-l 6', 'other': '-m 5 -x 12'}
     print('[Info] Running tidk explore...')
-    quartet_util.runsub(f'tidk explore -d tmp/ -f {genomefile} -o {prefix} -e tsv {telorangedict[clade]} -t {minrepeattimes}', 'tidk explore')
-    # check suggested telomere
-    with open(f'tmp/{prefix}.txt', 'r') as r:
-        con = r.read()
-        if len(con.split()) == 3:
-            print(f'[Error] No telomere-like repeats found.')
-            sys.exit(0)
-        for i in range(3, len(con.split())-1, 3):
-            telorepeat = con.split()[i]
-            if clade == 'plant' and telorepeat not in 'TTTAGGG'*2 and telorepeat not in 'CCCTAAA'*2:
-                print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTTAGGG.')
-            elif clade == 'animal' and telorepeat not in 'TTAGGG'*2 and telorepeat not in 'CCCTAA'*2:
-                print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTAGGG.')
-            else:
-                print(f'[Info] Telomere repeat found is {telorepeat}.')
-                break
-        
+    tidkversion = float(subprocess.run(f'tidk -V', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode('utf-8').strip().split()[1][2:])
+    if tidkversion < 2.31:
+        quartet_util.runsub(f'tidk explore -d tmp/ -f {genomefile} -o {prefix} -e tsv {telorangedict[clade]} -t {minrepeattimes}', 'tidk explore')
+        # check suggested telomere
+        with open(f'tmp/{prefix}.txt', 'r') as r:
+            con = r.read()
+            if len(con.split()) == 3:
+                print(f'[Error] No telomere-like repeats found.')
+                sys.exit(0)
+            for i in range(3, len(con.split())-1, 3):
+                telorepeat = con.split()[i]
+                if clade == 'plant' and telorepeat not in 'TTTAGGG'*2 and telorepeat not in 'CCCTAAA'*2:
+                    print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTTAGGG.')
+                elif clade == 'animal' and telorepeat not in 'TTAGGG'*2 and telorepeat not in 'CCCTAA'*2:
+                    print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTAGGG.')
+                else:
+                    print(f'[Info] Telomere repeat found is {telorepeat}.')
+                    break
+    else:
+        quartet_util.runsub(f'tidk explore {telorangedict[clade]} -t {minrepeattimes} {genomefile} > tmp/{prefix}.txt', 'tidk explore')
+        # check suggested telomere
+        with open(f'tmp/{prefix}.txt', 'r') as r:
+            con = r.read()
+            if len(con.split()) == 2:
+                print(f'[Error] No telomere-like repeats found.')
+                sys.exit(0)
+            for i in range(2, len(con.split())-1, 2):
+                telorepeat = con.split()[i]
+                if clade == 'plant' and telorepeat not in 'TTTAGGG'*2 and telorepeat not in 'CCCTAAA'*2:
+                    print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTTAGGG.')
+                elif clade == 'animal' and telorepeat not in 'TTAGGG'*2 and telorepeat not in 'CCCTAA'*2:
+                    print(f'[Warning] Telomere repeat found is {telorepeat} instead of TTAGGG.')
+                else:
+                    print(f'[Info] Telomere repeat found is {telorepeat}.')
+                    break        
     # run tidk search
     print('[Info] Running tidk search...')
     quartet_util.runsub(f'tidk search -d tmp/ -f {genomefile} -o {prefix} -e csv -s {telorepeat} -w 10000', 'tidk search')
