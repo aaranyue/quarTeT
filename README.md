@@ -8,6 +8,9 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.1.1
+- Fix a bug that CentroMiner stuck after v1.0.4
+
 1.1.0 
 - AssemblyMapper: new option '--nofilter'. With this option, input contigs will not be split or discard even if have gaps or too short.
 - GapFiller: support join, but this is not as reliable as fill. you can use option '--fillonly' and '--joinonly' to disable one of them.
