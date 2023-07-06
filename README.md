@@ -78,6 +78,7 @@ Usage: python3 quartet.py AssemblyMapper <parameters>
   -p PREFIX             The prefix used on generated files, default: quarTeT
   -t THREADS            Use number of threads, default: 1
   -a {minimap2,mummer}  Specify alignment program (support minimap2 and mummer), default: minimap2
+  --nofilter            Use original sequence input, no filtering.
   --plot                Plot a colinearity graph for draft genome to reference alignments. (will cost more time)
   --overwrite           Overwrite existing alignment file instead of reuse.
   --minimapoption MINIMAPOPTION
