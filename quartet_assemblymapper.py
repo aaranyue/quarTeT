@@ -38,15 +38,17 @@ def AssemblyMapper(args):
 
     # check telomere in contigs
     print('[Info] Checking telomere in contigs...')
-    subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    telofile = f'tmp/{prefix}.tig.telo.info'
+    if not os.path.exists(telofile):
+        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     monopolize = []
     forceleft = []
     forceright = []
     refdict = quartet_util.readFastaAsDict(refgenomefile)
     minchrlen = min([len(y) for x, y in refdict.items()])
-    if os.path.exists(f'tmp/{prefix}.tig.telo.info'):
-        with open(f'tmp/{prefix}.tig.telo.info', 'r') as telo:
+    if os.path.exists(telofile):
+        with open(telofile, 'r') as telo:
             for line in telo:
                 if line.startswith('#'):
                     continue
