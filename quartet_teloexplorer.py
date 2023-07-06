@@ -12,11 +12,11 @@ import quartet_util
 def teloExplorer(args):
     genomefile, clade, minrepeattimes, prefix = args
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    
+    tidkversion = float(subprocess.run(f'tidk -V', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode('utf-8').strip().split()[1][2:])
+   
     # run tidk explore
     telorangedict = {'plant': '-l 7', 'animal': '-l 6', 'other': '-m 5 -x 12'}
     print('[Info] Running tidk explore...')
-    tidkversion = float(subprocess.run(f'tidk -V', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode('utf-8').strip().split()[1][2:])
     if tidkversion < 2.31:
         quartet_util.runsub(f'tidk explore -d tmp/ -f {genomefile} -o {prefix} -e tsv {telorangedict[clade]} -t {minrepeattimes}', 'tidk explore')
         # check suggested telomere
@@ -53,41 +53,54 @@ def teloExplorer(args):
                     break        
     # run tidk search
     print('[Info] Running tidk search...')
-    quartet_util.runsub(f'tidk search -d tmp/ -f {genomefile} -o {prefix} -e csv -s {telorepeat} -w 10000', 'tidk search')
-    # sort telomere info
-    print('[Info] Analysising...')
-    with open(f'tmp/{prefix}_telomeric_repeat_windows.csv', 'r') as l:
-        telodict = {}
-        block = collections.defaultdict(list)
-        for line in l:
-            if not line.startswith('id'):
-                chrid, start, forwardrepeatnum, reverserepeatnum, repeatpattern = line.split(',')
-                block[chrid].append([int(forwardrepeatnum), int(reverserepeatnum)])
-        for chrid in block:
-            sidesize = math.floor(len(block[chrid])/2) if len(block[chrid]) < 30 else 15
-            lefttelo = block[chrid][0:sidesize]
-            totalforwardrepeatnum = 0
-            totalreverserepeatnum = 0
-            for forwardrepeatnum, reverserepeatnum in lefttelo:
-                totalforwardrepeatnum += forwardrepeatnum
-                totalreverserepeatnum += reverserepeatnum
-            if max(totalforwardrepeatnum, totalreverserepeatnum) >= minrepeattimes:
-                if totalforwardrepeatnum >= totalreverserepeatnum:
-                    telodict[f'{chrid}.L'] = [totalforwardrepeatnum, '+']
-                else:
-                    telodict[f'{chrid}.L'] = [totalreverserepeatnum, '-']
+    if tidkversion < 2.31:
+        quartet_util.runsub(f'tidk search -d tmp/ -f {genomefile} -o {prefix} -e csv -s {telorepeat} -w 10000', 'tidk search')
+        # sort telomere info
+        print('[Info] Analysising...')
+        with open(f'tmp/{prefix}_telomeric_repeat_windows.csv', 'r') as l:
+            telodict = {}
+            block = collections.defaultdict(list)
+            for line in l:
+                if not line.startswith('id'):
+                    chrid, start, forwardrepeatnum, reverserepeatnum, repeatpattern = line.split(',')
+                    block[chrid].append([int(forwardrepeatnum), int(reverserepeatnum)])
+    else:
+        quartet_util.runsub(f'tidk search -d tmp/ -o {prefix} -e tsv -s {telorepeat} -w 10000 {genomefile}', 'tidk search')
+        # sort telomere info
+        print('[Info] Analysising...')
+        with open(f'tmp/{prefix}_telomeric_repeat_windows.tsv', 'r') as l:
+            telodict = {}
+            block = collections.defaultdict(list)
+            for line in l:
+                if not line.startswith('id'):
+                    chrid, start, forwardrepeatnum, reverserepeatnum, repeatpattern = line.split()
+                    block[chrid].append([int(forwardrepeatnum), int(reverserepeatnum)])
                 
-            righttelo = block[chrid][len(block[chrid])-sidesize:]
-            totalforwardrepeatnum = 0
-            totalreverserepeatnum = 0
-            for forwardrepeatnum, reverserepeatnum in righttelo:
-                totalforwardrepeatnum += forwardrepeatnum
-                totalreverserepeatnum += reverserepeatnum
-            if max(totalforwardrepeatnum, totalreverserepeatnum) >= minrepeattimes:
-                if totalforwardrepeatnum >= totalreverserepeatnum:
-                    telodict[f'{chrid}.R'] = [totalforwardrepeatnum, '+']
-                else:
-                    telodict[f'{chrid}.R'] = [totalreverserepeatnum, '-']
+    for chrid in block:
+        sidesize = math.floor(len(block[chrid])/2) if len(block[chrid]) < 30 else 15
+        lefttelo = block[chrid][0:sidesize]
+        totalforwardrepeatnum = 0
+        totalreverserepeatnum = 0
+        for forwardrepeatnum, reverserepeatnum in lefttelo:
+            totalforwardrepeatnum += forwardrepeatnum
+            totalreverserepeatnum += reverserepeatnum
+        if max(totalforwardrepeatnum, totalreverserepeatnum) >= minrepeattimes:
+            if totalforwardrepeatnum >= totalreverserepeatnum:
+                telodict[f'{chrid}.L'] = [totalforwardrepeatnum, '+']
+            else:
+                telodict[f'{chrid}.L'] = [totalreverserepeatnum, '-']
+            
+        righttelo = block[chrid][len(block[chrid])-sidesize:]
+        totalforwardrepeatnum = 0
+        totalreverserepeatnum = 0
+        for forwardrepeatnum, reverserepeatnum in righttelo:
+            totalforwardrepeatnum += forwardrepeatnum
+            totalreverserepeatnum += reverserepeatnum
+        if max(totalforwardrepeatnum, totalreverserepeatnum) >= minrepeattimes:
+            if totalforwardrepeatnum >= totalreverserepeatnum:
+                telodict[f'{chrid}.R'] = [totalforwardrepeatnum, '+']
+            else:
+                telodict[f'{chrid}.R'] = [totalreverserepeatnum, '-']
     
     teloinfofile = f'{prefix}.telo.info'
     fasta = quartet_util.readFastaAsDict(genomefile)
