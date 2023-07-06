@@ -269,5 +269,8 @@ def runsub(cmd, name):
     cmdr = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if cmdr.returncode != 0:
         print(f'[Error] Unexcepted error occur in {name} as follow:')
+        print('stdout:')
         print(cmdr.stdout.decode("utf-8"))
+        print('stderr:')
+        print(cmdr.stderr.decode("utf-8"))
         sys.exit(1)
