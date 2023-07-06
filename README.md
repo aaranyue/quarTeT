@@ -8,15 +8,26 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
-1.0.4 Add more report when called programs are failed.
+1.1.0 
+- AssemblyMapper: new option '--nofilter'. With this option, input contigs will not be split or discard even if have gaps or too short.
+- GapFiller: support join, but this is not as reliable as fill. you can use option '--fillonly' and '--joinonly' to disable one of them.
+- TeloExplorer: now compatible with latest tidk version 0.2.31.
+- fix a bug that error report added in v1.0.4 didn't include stderr.
 
-1.0.3 Fix a bug that when figure drawing is failed, there are no warning raised.
+1.0.4 
+- Add more report when called programs are failed.
 
-1.0.2 Fix a bug in TeloExplorer that when more than one possible telomere-like repeats are found, it will be considered as no telomere-like repeat found.
+1.0.3
+- Fix a bug that when figure drawing is failed, there are no warning raised.
 
-1.0.1 Fix a bug in CentroMiner that when no centromere-like region is found on a chromosome, genome overview plotting will unexceptly exit.
+1.0.2 
+- Fix a bug in TeloExplorer that when more than one possible telomere-like repeats are found, it will be considered as no telomere-like repeat found.
 
-1.0.0 Initial release
+1.0.1 
+- Fix a bug in CentroMiner that when no centromere-like region is found on a chromosome, genome overview plotting will unexceptly exit.
+
+1.0.0 
+- Initial release
 
 ## Getting Started
 ### Use quarTeT on Web
