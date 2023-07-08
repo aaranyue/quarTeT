@@ -39,7 +39,7 @@ def AssemblyMapper(args):
     # check telomere in contigs
     print('[Info] Checking telomere in contigs...')
     telofile = f'tmp/{prefix}.tig.telo.info'
-    if not os.path.exists(telofile):
+    if not os.path.exists(telofile) or overwrite == True:
         subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     monopolize = []
