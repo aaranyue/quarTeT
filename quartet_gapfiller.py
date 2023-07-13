@@ -17,7 +17,7 @@ def GapFiller(args):
     flankingdict = {}
     gapdict = {}
     for sid, seq in draftgenomedict.items():
-        if 'N' in seq:
+        if 'N'*100 in seq:
             i = 1
             gapsitelist = [r.span() for r in re.finditer(r'N+', seq)]
             for gapsite in gapsitelist:
@@ -33,7 +33,7 @@ def GapFiller(args):
     flankingfastafile = f'tmp/{prefix}.gap.flanking.fasta'
     with open(flankingfastafile, 'w') as f:
         for sid, seq in flankingdict.items():
-            if 'N' in seq:
+            if 'N'*100 in seq:
                 print('[Error] Flanking sequence contains gap. Recommend to lower -f parameter or check your file.')
                 sys.exit(0)
             f.write(f'>{sid}\n{seq}\n')
@@ -49,7 +49,7 @@ def GapFiller(args):
         gapfilldict = {}
         needsplit = False
         for sid, seq in gapfillfasta.items():
-            if 'N' in seq:
+            if 'N'*100 in seq:
                 needsplit = True
                 i = 1
                 for tig in re.split(r'N+', seq):
@@ -170,7 +170,7 @@ def GapFiller(args):
         info.write(f'# GC content: {gccontent}\n')
         info.write(f'# ChrID\tLength\tGapcount\tGaplocus\n')
         for sid, seq in chrfastadict.items():
-            if 'N' in seq:
+            if 'N'*100 in seq:
                 count = 0
                 locus = []
                 gapsitelist = [r.span() for r in re.finditer(r'N+', seq)]
