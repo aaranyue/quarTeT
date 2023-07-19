@@ -231,4 +231,5 @@ if __name__ == '__main__':
     # run
     args = [draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
             maxfillinglen, prefix, threads, minimapoption, overwrite, fillonly, joinonly]
+    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, fillonly={fillonly}, joinonly={joinonly}')
     quartet_util.run(GapFiller, args)

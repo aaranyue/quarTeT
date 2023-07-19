@@ -164,5 +164,6 @@ if __name__ == '__main__':
 
     # run
     args = [genomefile, clade, minrepeattimes, prefix]
+    print(f'[Info] Paramater: genomefile={genomefile}, clade={clade}, minrepeattimes={minrepeattimes}, prefix={prefix}')
     quartet_util.run(teloExplorer, args)
     

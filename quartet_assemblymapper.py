@@ -296,4 +296,5 @@ if __name__ == '__main__':
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
             prefix, threads, aligner, nofilter, plot, overwrite, nucmeroption, deltafilteroption, minimapoption]
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, plot={plot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
     quartet_util.run(AssemblyMapper, args)

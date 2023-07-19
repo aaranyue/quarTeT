@@ -284,4 +284,5 @@ if __name__ == '__main__':
     # run
     args = [genomefile, tegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, 
             match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength]
+    print(f'[Info] Paramater: genomefile={genomefile}, tegfffile={tegfffile}, minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, prefix={prefix}, threads={threads}, overwrite={overwrite}, match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, minscore={minscore}, identity={identity}, periodmaxdelta={periodmaxdelta}, wordlength={wordlength}')
     quartet_util.run(centroMiner, args)
