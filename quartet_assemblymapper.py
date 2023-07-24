@@ -292,6 +292,7 @@ if __name__ == '__main__':
     minalignmentidentity = float(parser.parse_args().min_alignment_identity) / 100
     if minalignmentidentity < 0 or minalignmentidentity > 1:
         print('[Error] min_alignment_identity should be within 0~100.')
+        sys.exit(0)
     prefix = parser.parse_args().prefix
     threads = parser.parse_args().threads
     aligner = parser.parse_args().aligner

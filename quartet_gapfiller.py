@@ -29,6 +29,7 @@ def GapFiller(args):
                 i += 1
     if flankingdict == {}:
         print('[Error] Input genome does not have gap.')
+        sys.exit(0)
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     flankingfastafile = f'tmp/{prefix}.gap.flanking.fasta'
     with open(flankingfastafile, 'w') as f:
@@ -214,9 +215,11 @@ if __name__ == '__main__':
     minalignmentlength2 = int(parser.parse_args().min_alignment_length)
     if minalignmentlength2 > flanking:
         print('[Error] min_alignment_length should be less than flanking_len.')
+        sys.exit(0)
     minalignmentidentity2 = float(parser.parse_args().min_alignment_identity) / 100
     if minalignmentidentity2 < 0 or minalignmentidentity2 > 1:
         print('[Error] min_alignment_identity should be within 0~100.')
+        sys.exit(0)
     maxfillinglen = int(parser.parse_args().max_filling_len)
     prefix = parser.parse_args().prefix
     threads = parser.parse_args().threads
