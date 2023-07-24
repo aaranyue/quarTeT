@@ -38,6 +38,7 @@ def GapFiller(args):
                 print('[Error] Flanking sequence contains gap. Recommend to lower -f parameter or check your file.')
                 sys.exit(0)
             f.write(f'>{sid}\n{seq}\n')
+    draftgenomedict = {}
     
     # process gapfilling file(s)
     gapcloserdict = {}
@@ -66,6 +67,12 @@ def GapFiller(args):
                     c.write(f'>{tigid}\n{seq}\n')
             gapfillfasta = gapfilldict
 
+        # reduce memory 
+        with open('tmp/gapfillfasta.fasta', 'w') as tmpgapfillfasta:
+            for sid, seq in gapfillfasta.items():
+                tmpgapfillfasta.write(f'>{sid}\n{seq}\n')
+        gapfillfasta = {}
+
         pafgapfillfile = quartet_util.minimap(gapfillfile, flankingfastafile, prefix, f'flank_map_{gapfiller}', minimapoption, False, overwrite)
 
         allalignment = []
@@ -85,6 +92,7 @@ def GapFiller(args):
         
         # process each gap
         print(f'[Info] Analysising Alignments...')
+        gapfillfasta = quartet_util.readFastaAsDict('tmp/gapfillfasta.fasta')
         for gapid in gapdict:
             Leftanchor = [aln for aln in allalignment if aln['gapid'] == gapid and aln['LR'] == 'L']
             Rightanchor = [aln for aln in allalignment if aln['gapid'] == gapid and aln['LR'] == 'R']
@@ -139,6 +147,7 @@ def GapFiller(args):
     
     # make fasta
     filledfastafile = f'{prefix}.genome.filled.fasta'
+    draftgenomedict = quartet_util.readFastaAsDict(draftgenomefile)
     with open(filledfastafile, 'w') as w:
         chrfastadict = {}
         for sid, seq in draftgenomedict.items():

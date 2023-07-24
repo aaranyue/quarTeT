@@ -11,6 +11,7 @@ Task include:
 1.1.3
 - Add more error report.
 - Reduce peak memory.
+- Fix some error without exit.
 
 1.1.2
 - Fix a bug that AssemblyMapper cannot overwrite existing telomere checking result.
