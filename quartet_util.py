@@ -99,8 +99,8 @@ def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite):
     subprocess.run(f'mv -t ./ -f tmp/{prefix}.{suffix}.paf', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if not os.path.exists(f'{prefix}.{suffix}.paf') or overwrite == True:
         cmdr = subprocess.run(f'minimap2 {minimapoption} -c -o {prefix}.{suffix}.paf {reffasta} {qryfasta}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        if '[morecore]' in cmdr.stderr.decode("utf-8"):
-            print(f'[Error] Memory insufficient. Please try again later.')
+        if '[morecore]' in cmdr.stderr.decode("utf-8") or cmdr.returncode < 0:
+            print(f'[Error] Memory insufficient.')
             sys.exit(0)
         elif cmdr.returncode != 0:
             print(f'[Error] Unexcepted error occur in minimap2 as follow:')
