@@ -59,6 +59,8 @@ def AssemblyMapper(args):
                     forceleft.append(tigid)
                 elif status == 'right':
                     forceright.append(tigid)
+    else:
+        print('[Warning] Cannot identify telomeres in contigs.')
 
     # get all alignments
     allAlignment = {}

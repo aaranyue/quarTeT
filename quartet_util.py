@@ -99,6 +99,15 @@ def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite):
         cmdr = subprocess.run(f'minimap2 {minimapoption} -c -o {prefix}.{suffix}.paf {reffasta} {qryfasta}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         if '[morecore]' in cmdr.stderr.decode("utf-8"):
             print(f'[Error] Memory insufficient. Please try again later.')
+        elif cmdr.returncode != 0:
+            print(f'[Error] Unexcepted error occur in minimap2 as follow:')
+            print(f'cmd: {cmdr.args}')
+            print(f'returncode: {cmdr.returncode}')
+            print('stdout:')
+            print(cmdr.stdout.decode("utf-8"))
+            print('stderr:')
+            print(cmdr.stderr.decode("utf-8"))
+            sys.exit(1)
     if os.path.getsize(f'{prefix}.{suffix}.paf') == 0:
         print(f'[Error] No alignment found.')
         sys.exit(0)
@@ -259,7 +268,7 @@ convertSVG("chromosome.svg", device = "png")'''
             r.write(RscriptNolabel)
     cmdr = subprocess.run(f'Rscript genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if 'Execution halted' in cmdr.stderr.decode("utf-8"):
-        print(f'[Warning] Figure drawing is failed. This may due to too many gaps.')
+        print(f'[Warning] Figure drawing is failed. This may due to too many sequences or gaps.')
     subprocess.run(f'rm chr.txt label.txt genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     subprocess.run(f'mv chromosome.png {outprefix}.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     subprocess.run(f'mv chromosome.svg tmp/{outprefix}.svg', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -269,6 +278,8 @@ def runsub(cmd, name):
     cmdr = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if cmdr.returncode != 0:
         print(f'[Error] Unexcepted error occur in {name} as follow:')
+        print(f'cmd: {cmdr.args}')
+        print(f'returncode: {cmdr.returncode}')
         print('stdout:')
         print(cmdr.stdout.decode("utf-8"))
         print('stderr:')
