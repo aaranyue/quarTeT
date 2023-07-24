@@ -38,7 +38,7 @@ def GapFiller(args):
                 print('[Error] Flanking sequence contains gap. Recommend to lower -f parameter or check your file.')
                 sys.exit(0)
             f.write(f'>{sid}\n{seq}\n')
-    draftgenomedict = {}
+    del draftgenomedict
     
     # process gapfilling file(s)
     gapcloserdict = {}
@@ -71,7 +71,8 @@ def GapFiller(args):
         with open('tmp/gapfillfasta.fasta', 'w') as tmpgapfillfasta:
             for sid, seq in gapfillfasta.items():
                 tmpgapfillfasta.write(f'>{sid}\n{seq}\n')
-        gapfillfasta = {}
+        del gapfillfasta
+        del gapfilldict
 
         pafgapfillfile = quartet_util.minimap(gapfillfile, flankingfastafile, prefix, f'flank_map_{gapfiller}', minimapoption, False, overwrite)
 

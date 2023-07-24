@@ -26,7 +26,7 @@ def centroMiner(args):
         with open(splitchrfastafile, 'w') as Chrfasta:
             Chrfasta.write(f'>{Chr}\n{genomedict[Chr]}\n')
     genomedictkey = genomedict.keys()
-    genomedict = {}
+    del genomedict
 
     def centroblaster(Chr):
         # run TRF and get all patterns
@@ -175,7 +175,7 @@ def centroMiner(args):
                 for [tr, subtrlength] in sorted(subTRlength.items(), key=lambda x:x[1], reverse=True):
                     subTRcoverage = round(subtrlength/length * 100, 2)
                     out.write(f'\t{tr}\t{len(TRdict[tr])}\t{subtrlength}\t{subTRcoverage}%\t{TRdict[tr]}\n')
-        TRdict = {}
+        del TRdict
 
     # multithread
     def print_error(value):

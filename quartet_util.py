@@ -42,7 +42,9 @@ def decompress(file):
 
 def readFastaAsDict(fastafile):
     fastaDict = {}
-    allline = open(fastafile, 'r').read()
+    fil = open(fastafile, 'r')
+    allline = fil.read()
+    fil.close()
     eachidseq = allline.split('>')
     for idseq in eachidseq:
         if idseq != '':

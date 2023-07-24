@@ -66,14 +66,14 @@ def AssemblyMapper(args):
     with open('tmp/totaldict.fasta') as tmptotaldict:
         for sid, seq in totaldict.items():
             tmptotaldict.write(f'>{sid}\n{seq}\n')
-    totaldict = {}
+    del totaldict
     with open('tmp/contigsdict.fasta') as tmpcontigsdict:
         for sid, seq in contigsdict.items():
             tmpcontigsdict.write(f'>{sid}\n{seq}\n')
-    contigsdict = {}
+    del contigsdict
     refdictkey = refdict.keys()
-    refdict = {}
-    inputdict = {}
+    del refdict
+    del inputdict
 
     # get all alignments
     allAlignment = {}
