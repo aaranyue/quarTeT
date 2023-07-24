@@ -8,6 +8,10 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.1.3
+- Add more error report.
+- Reduce peak memory.
+
 1.1.2
 - Fix a bug that AssemblyMapper cannot overwrite existing telomere checking result.
 - Fix a bug that small number of N repesenting unknown bases are identified as gap.

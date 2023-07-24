@@ -25,6 +25,8 @@ def centroMiner(args):
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
         with open(splitchrfastafile, 'w') as Chrfasta:
             Chrfasta.write(f'>{Chr}\n{genomedict[Chr]}\n')
+    genomedictkey = genomedict.keys()
+    genomedict = {}
 
     def centroblaster(Chr):
         # run TRF and get all patterns
@@ -173,13 +175,14 @@ def centroMiner(args):
                 for [tr, subtrlength] in sorted(subTRlength.items(), key=lambda x:x[1], reverse=True):
                     subTRcoverage = round(subtrlength/length * 100, 2)
                     out.write(f'\t{tr}\t{len(TRdict[tr])}\t{subtrlength}\t{subTRcoverage}%\t{TRdict[tr]}\n')
+        TRdict = {}
 
     # multithread
     def print_error(value):
         print("error: ", value)
     print('[Info] Processing each chromosome...')
-    p = Pool(min(len(genomedict), int(threads)))
-    for Chr in genomedict:
+    p = Pool(min(len(genomedictkey), int(threads)))
+    for Chr in genomedictkey:
         p.apply_async(centroblaster, (Chr,), error_callback=print_error)
     p.close()
     p.join()
@@ -189,7 +192,7 @@ def centroMiner(args):
     with open(bestcandidatefile, 'w') as best:
         best.write(f'# Chr\tstart\tend\tlength\tTRlength\tTRcoverage\tTElength\tTEcoverage\tregionscore\n')
         best.write(f'#\tsubTR\tperiod\tsubTRlength\tsubTRcoverage\tpattern\n')
-        for Chr in genomedict:
+        for Chr in genomedictkey:
             candidatefile = f'candidate/{prefix}.{Chr}.candidate'
             with open(candidatefile, 'r') as can:
                 subTRlength = 0

@@ -13,6 +13,7 @@ def AssemblyMapper(args):
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
+    subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     inputdict = quartet_util.readFastaAsDict(qryfile)
     totaldict = inputdict.copy()
     contigsdict = {}
@@ -27,7 +28,6 @@ def AssemblyMapper(args):
                     i += 1
             elif len(seq) >= mincontiglength:
                 contigsdict[tigid] = seq
-        subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         contigfile = f'tmp/{prefix}.contig.fasta'
         with open(contigfile, 'w') as c:
             for tigid, seq in contigsdict.items():
@@ -61,6 +61,19 @@ def AssemblyMapper(args):
                     forceright.append(tigid)
     else:
         print('[Warning] Cannot identify telomeres in contigs.')
+
+    # reduce memory   
+    inputdict = {}
+    with open('tmp/totaldict.fasta') as tmptotaldict:
+        for sid, seq in totaldict.items():
+            tmptotaldict.write(f'>{sid}\n{seq}\n')
+    totaldict = {}
+    with open('tmp/contigsdict.fasta') as tmpcontigsdict:
+        for sid, seq in contigsdict.items():
+            tmpcontigsdict.write(f'>{sid}\n{seq}\n')
+    contigsdict = {}
+    refdictkey = refdict.keys()
+    refdict = {}
 
     # get all alignments
     allAlignment = {}
@@ -146,6 +159,8 @@ def AssemblyMapper(args):
     # write all contigs' destination
     contiginfo = []
     mappedbases, discardedbases = 0, 0
+    totaldict = quartet_util.readFastaAsDict('tmp/totaldict.fasta')
+    contigsdict = quartet_util.readFastaAsDict('tmp/contigsdict.fasta')
     for tigid, seq in totaldict.items():
         tiglen = len(seq)
         if tigid in map:
@@ -176,7 +191,7 @@ def AssemblyMapper(args):
     for qryid, mapinfo in map.items():
         if mapinfo['refid'] not in mappedchrlist:
             mappedchrlist.append(mapinfo['refid'])
-    for id in refdict:
+    for id in refdictkey:
         if id not in mappedchrlist:
             print(f'[Warning] {id} failed to be mapped by any contigs.') 
 
