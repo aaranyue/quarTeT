@@ -57,6 +57,11 @@ quarTeT command-line program is availble for Linux.
 - [gnuplot](https://github.com/gnuplot/gnuplot) (tested on 4.6 patchlevel 2 and 6) 
 - [R](https://www.R-project.org/) (>3.5.0, tested on 3.6.0 and 4.2.2) 
     - RIdeogram (tested on 0.2.2)
+
+All these dependencies can be easily install via conda:
+
+`conda create -n quartet --channel conda-forge --channel bioconda Python Minimap2 MUMmer4 trf CD-hit BLAST tidk R R-RIdeogram gnuplot`
+
 #### Installation
 quarTeT do not require installation.
 
