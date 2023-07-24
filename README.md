@@ -9,8 +9,8 @@ Task include:
 
 ## Version Change log
 1.1.3
-- Add more error report.
 - Reduce peak memory.
+- Add more error report.
 - Fix some error without exit.
 
 1.1.2
