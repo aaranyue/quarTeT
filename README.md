@@ -67,6 +67,8 @@ All these dependencies can be easily install via conda:
 
 `conda create -n quartet --channel conda-forge --channel bioconda Python Minimap2 MUMmer4 trf CD-hit BLAST tidk R R-RIdeogram gnuplot`
 
+(Recently we discover that using conda to install R will result in blank PNG. However, SVG in `tmp` dir is correctly generated.)
+
 #### Installation
 quarTeT do not require installation.
 
