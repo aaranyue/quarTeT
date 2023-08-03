@@ -8,6 +8,11 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.1.4
+- Fix a bug in AssemblyMapper that large dict tmp file not write properly.
+- Reduce more peak memory.
+- Add a memory insufficient error report.
+
 1.1.3
 - Reduce peak memory.
 - Add more error report.

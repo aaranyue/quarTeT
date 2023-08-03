@@ -63,11 +63,11 @@ def AssemblyMapper(args):
         print('[Warning] Cannot identify telomeres in contigs.')
 
     # reduce memory   
-    with open('tmp/totaldict.fasta') as tmptotaldict:
+    with open('tmp/totaldict.fasta', 'w') as tmptotaldict:
         for sid, seq in totaldict.items():
             tmptotaldict.write(f'>{sid}\n{seq}\n')
     del totaldict
-    with open('tmp/contigsdict.fasta') as tmpcontigsdict:
+    with open('tmp/contigsdict.fasta', 'w') as tmpcontigsdict:
         for sid, seq in contigsdict.items():
             tmpcontigsdict.write(f'>{sid}\n{seq}\n')
     del contigsdict
