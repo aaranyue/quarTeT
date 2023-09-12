@@ -41,7 +41,7 @@ def AssemblyMapper(args):
     telofile = f'tmp/{prefix}.tig.telo.info'
     if not os.path.exists(telofile) or overwrite == True:
         subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png {prefix}.tig.telo.svg', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     monopolize = []
     forceleft = []
     forceright = []
@@ -63,11 +63,11 @@ def AssemblyMapper(args):
         print('[Warning] Cannot identify telomeres in contigs.')
 
     # reduce memory   
-    with open('tmp/totaldict.fasta', 'w') as tmptotaldict:
+    with open(f'tmp/{prefix}.totaldict.fasta', 'w') as tmptotaldict:
         for sid, seq in totaldict.items():
             tmptotaldict.write(f'>{sid}\n{seq}\n')
     del totaldict
-    with open('tmp/contigsdict.fasta', 'w') as tmpcontigsdict:
+    with open(f'tmp/{prefix}.contigsdict.fasta', 'w') as tmpcontigsdict:
         for sid, seq in contigsdict.items():
             tmpcontigsdict.write(f'>{sid}\n{seq}\n')
     del contigsdict
@@ -159,15 +159,15 @@ def AssemblyMapper(args):
     # write all contigs' destination
     contiginfo = []
     mappedbases, discardedbases = 0, 0
-    totaldict = quartet_util.readFastaAsDict('tmp/totaldict.fasta')
-    contigsdict = quartet_util.readFastaAsDict('tmp/contigsdict.fasta')
+    totaldict = quartet_util.readFastaAsDict(f'tmp/{prefix}.totaldict.fasta')
+    contigsdict = quartet_util.readFastaAsDict(f'tmp/{prefix}.contigsdict.fasta')
     for tigid, seq in totaldict.items():
         tiglen = len(seq)
         if tigid in map:
             target = map[tigid]['refid']
             mappedbases += tiglen
         else:
-            if tiglen < mincontiglength:
+            if tiglen < mincontiglength and nofilter != True:
                 target = 'TooShort'
                 discardedbases += tiglen
             elif tigid in contigsdict:

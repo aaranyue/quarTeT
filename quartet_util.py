@@ -204,6 +204,7 @@ def agpGap(infile, outagp):
                     count += 1
 
 def drawgenome(agpfile, outprefix, centrofile=None, telofile=None):
+    subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if centrofile == None and os.path.exists(f'{outprefix}.best.candidate'):
         centrofile = f'{outprefix}.best.candidate'
     if telofile == None and os.path.exists(f'{outprefix}.telo.info'):
@@ -216,7 +217,7 @@ def drawgenome(agpfile, outprefix, centrofile=None, telofile=None):
                 chrnumber += 1
             chrid, seqstart, seqend, num, attr, tigid, tigstart, tigend, strand = line.split()
             agpblock[chrid].append([chrnumber, seqstart, seqend, num, attr, tigid, tigstart, tigend, strand])
-    with open('chr.txt', 'w') as chrfile:
+    with open(f'tmp/{outprefix}.chr.txt', 'w') as chrfile:
         if centrofile == None: 
             chrfile.write('Chr\tStart\tEnd\n')
             for chrid in agpblock:
@@ -236,7 +237,7 @@ def drawgenome(agpfile, outprefix, centrofile=None, telofile=None):
                 else:
                     chrfile.write(f'{agpblock[chrid][-1][0]}\t1\t{agpblock[chrid][-1][2]}\t0\t0\n')
     haslabel = False
-    with open('label.txt', 'w') as labelfile:   
+    with open(f'tmp/{outprefix}.label.txt', 'w') as labelfile:   
         labelfile.write('Type\tShape\tChr\tStart\tEnd\tcolor\n')     
         for chrid in agpblock:
             for line in agpblock[chrid]:
@@ -255,27 +256,31 @@ def drawgenome(agpfile, outprefix, centrofile=None, telofile=None):
                     if int(rightnum) != 0:
                         labelfile.write(f'telomere\ttriangle\t{agpblock[chrid][-1][0]}\t{int(chrlen)-10000}\t{chrlen}\t0000ff\n')
                         haslabel = True
-    with open('genomedrawer.r', 'w') as r:
+    with open(f'tmp/{outprefix}.genomedrawer.r', 'w') as r:
         if haslabel == True:
-            Rscript = '''library(RIdeogram)
-chr <- read.table("chr.txt", sep = "\\t", header = T, stringsAsFactors = F)
-label <- read.table("label.txt", sep = "\\t", header = T, stringsAsFactors = F)
-ideogram(karyotype = chr, label = label, label_type = "marker")
-convertSVG("chromosome.svg", device = "png")'''
+            Rscript = f'''library(RIdeogram)
+chr <- read.table("tmp/{outprefix}.chr.txt", sep = "\\t", header = T, stringsAsFactors = F)
+label <- read.table("tmp/{outprefix}.label.txt", sep = "\\t", header = T, stringsAsFactors = F)
+ideogram(karyotype = chr, label = label, label_type = "marker", output = "{outprefix}.svg")
+convertSVG("{outprefix}.svg", file = "{outprefix}", device = "png")'''
             r.write(Rscript)
         else:
-            RscriptNolabel = '''library(RIdeogram)
-chr <- read.table("chr.txt", sep = "\\t", header = T, stringsAsFactors = F)
-ideogram(karyotype = chr)
-convertSVG("chromosome.svg", device = "png")'''
+            RscriptNolabel = f'''library(RIdeogram)
+chr <- read.table("tmp/{outprefix}.chr.txt", sep = "\\t", header = T, stringsAsFactors = F)
+ideogram(karyotype = chr, output = "{outprefix}.svg")
+convertSVG("{outprefix}.svg", file = "{outprefix}", device = "png")'''
             r.write(RscriptNolabel)
-    cmdr = subprocess.run(f'Rscript genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    if 'Execution halted' in cmdr.stderr.decode("utf-8"):
-        print(f'[Warning] Figure drawing is failed. This may due to too many sequences or gaps.')
-    subprocess.run(f'rm chr.txt label.txt genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    subprocess.run(f'mv chromosome.png {outprefix}.png', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    subprocess.run(f'mv chromosome.svg tmp/{outprefix}.svg', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    print(f'[Output] Chromosome plot write to: {outprefix}.png')
+    cmdr = subprocess.run(f'Rscript tmp/{outprefix}.genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    if cmdr.returncode != 0:
+        print(f'[Warning] Unexcepted error occur in Rscript figure drawing as follow:')
+        print(f'cmd: {cmdr.args}')
+        print(f'returncode: {cmdr.returncode}')
+        print('stdout:')
+        print(cmdr.stdout.decode("utf-8"))
+        print('stderr:')
+        print(cmdr.stderr.decode("utf-8"))
+    else:
+        print(f'[Output] Chromosome plot write to: {outprefix}.png')
     
 def runsub(cmd, name):
     cmdr = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)

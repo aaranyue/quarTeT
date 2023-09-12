@@ -68,7 +68,7 @@ def GapFiller(args):
             gapfillfasta = gapfilldict
 
         # reduce memory 
-        with open('tmp/gapfillfasta.fasta', 'w') as tmpgapfillfasta:
+        with open(f'tmp/{prefix}.gapfillfasta.fasta', 'w') as tmpgapfillfasta:
             for sid, seq in gapfillfasta.items():
                 tmpgapfillfasta.write(f'>{sid}\n{seq}\n')
         del gapfillfasta
@@ -93,7 +93,7 @@ def GapFiller(args):
         
         # process each gap
         print(f'[Info] Analysising Alignments...')
-        gapfillfasta = quartet_util.readFastaAsDict('tmp/gapfillfasta.fasta')
+        gapfillfasta = quartet_util.readFastaAsDict(f'tmp/{prefix}.gapfillfasta.fasta')
         for gapid in gapdict:
             Leftanchor = [aln for aln in allalignment if aln['gapid'] == gapid and aln['LR'] == 'L']
             Rightanchor = [aln for aln in allalignment if aln['gapid'] == gapid and aln['LR'] == 'R']

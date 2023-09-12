@@ -8,6 +8,12 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.1.5
+- SVG output is moved to work dir instead of tmp dir. Intermediate file for figure drawing is saved to tmp dir instead of auto-remove.
+- Fix a bug that running multiple quarTeT in one folder may cause error due to intermediate file overwrite.
+- Fix a bug in AssemblyMapper that with option '--nofilter', contigs shorter than 50000 bp are still marked as too short and count in discarded length.
+- Fix a bug that error in R figure drawing is not reported.
+
 1.1.4
 - Fix a bug in AssemblyMapper that large dict tmp file not write properly.
 - Reduce more peak memory.
@@ -67,7 +73,7 @@ All these dependencies can be easily install via conda:
 
 `conda create -n quartet --channel conda-forge --channel bioconda Python Minimap2 MUMmer4 trf CD-hit BLAST tidk R R-RIdeogram gnuplot`
 
-(Recently we discover that using conda to install R will result in blank PNG. However, SVG in `tmp` dir is correctly generated.)
+(Recently we discover that using conda to install R will result in blank PNG. However, SVG is correctly generated.)
 
 #### Installation
 quarTeT do not require installation.
