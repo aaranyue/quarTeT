@@ -9,7 +9,7 @@ import itertools
 import quartet_util
 
 def centroMiner(args):
-    genomefile, tegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength = args
+    genomefile, tegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength, max_TR_length = args
     
     # split genome into chr
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -33,7 +33,7 @@ def centroMiner(args):
         datfile = f'tmp/trfdat/{prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat'
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
         if not os.path.exists(datfile) or overwrite == True:
-            subprocess.run(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -d -h', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            subprocess.run(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         subprocess.run(f'mv -t tmp/trfdat -f {prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         with open(datfile, 'r') as trfResult:
             linelist = []
@@ -240,6 +240,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', dest='threads', default='1', help='Limit number of using threads, default: 1')
     parser.add_argument('-p', dest='prefix', type=str, default='quarTeT', help='Prefix used by generated files. Default: quarTeT')
     parser.add_argument('--trf', dest='trf_parameter', nargs='*', default=[2,7,7,80,10,50], help='Change TRF parameters: <match> <mismatch> <delta> <PM> <PI> <minscore> Default: 2 7 7 80 10 50')
+    parser.add_argument('-r', dest='max_TR_length', type=int, default=None, help='Maximum TR length expected for trf (in millions, eg, -l 3 for 3 million). Default: None')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing trf dat file instead of reuse.')
 
     # parse input paramater
@@ -252,7 +253,8 @@ if __name__ == '__main__':
     e = float(parser.parse_args().evalue)
     maxgap = int(parser.parse_args().max_gap)
     minlength = int(parser.parse_args().min_length)
-
+    max_TR_length = int(parser.parse_args().max_TR_length)
+    
     prefix = parser.parse_args().prefix
     threads = parser.parse_args().threads
     overwrite = parser.parse_args().overwrite
@@ -287,5 +289,5 @@ if __name__ == '__main__':
     # run
     args = [genomefile, tegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, 
             match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength]
-    print(f'[Info] Paramater: genomefile={genomefile}, tegfffile={tegfffile}, minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, prefix={prefix}, threads={threads}, overwrite={overwrite}, match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, minscore={minscore}, identity={identity}, periodmaxdelta={periodmaxdelta}, wordlength={wordlength}')
+    print(f'[Info] Paramater: genomefile={genomefile}, tegfffile={tegfffile}, minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, prefix={prefix}, threads={threads}, overwrite={overwrite}, match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, minscore={minscore}, identity={identity}, periodmaxdelta={periodmaxdelta}, wordlength={wordlength}, max_TR_length={max_TR_length}')
     quartet_util.run(centroMiner, args)
