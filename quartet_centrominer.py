@@ -240,7 +240,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', dest='threads', default='1', help='Limit number of using threads, default: 1')
     parser.add_argument('-p', dest='prefix', type=str, default='quarTeT', help='Prefix used by generated files. Default: quarTeT')
     parser.add_argument('--trf', dest='trf_parameter', nargs='*', default=[2,7,7,80,10,50], help='Change TRF parameters: <match> <mismatch> <delta> <PM> <PI> <minscore> Default: 2 7 7 80 10 50')
-    parser.add_argument('-r', dest='max_TR_length', type=int, default=None, help='Maximum TR length expected for trf (in millions, eg, -l 3 for 3 million). Default: None')
+    parser.add_argument('-r', dest='max_TR_length', type=int, default=3, help='Maximum TR length (in millions) expected for trf. Default: 3')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing trf dat file instead of reuse.')
 
     # parse input paramater
@@ -288,6 +288,6 @@ if __name__ == '__main__':
 
     # run
     args = [genomefile, tegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, 
-            match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength]
+            match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength, max_TR_length]
     print(f'[Info] Paramater: genomefile={genomefile}, tegfffile={tegfffile}, minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, prefix={prefix}, threads={threads}, overwrite={overwrite}, match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, minscore={minscore}, identity={identity}, periodmaxdelta={periodmaxdelta}, wordlength={wordlength}, max_TR_length={max_TR_length}')
     quartet_util.run(centroMiner, args)
