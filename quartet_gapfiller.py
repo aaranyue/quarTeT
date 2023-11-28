@@ -9,7 +9,7 @@ import quartet_util
 
 ### MAIN PROGRAM ###
 def GapFiller(args):
-    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, fillonly, joinonly = args
+    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly = args
 
     # get gap's flanking seq
     print('[Info] Getting gaps flanking sequence...')
@@ -118,7 +118,7 @@ def GapFiller(args):
                         gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': f'{fillstart}-{fillend}',
                                                 'seq': fillseq if Laln['strand'] == '+' else quartet_util.reversedseq(fillseq), 'strand': Laln['strand'], 
                                                 'score': score}
-                elif Laln['refend'] >= Raln['refstart'] and fillonly != True:
+                elif Laln['refend'] >= Raln['refstart'] and enablejoin == True:
                     if bestscore != 0:
                         continue
                     else:
@@ -213,8 +213,8 @@ if __name__ == '__main__':
     parser.add_argument('-m', dest='max_filling_len', type=int, default=1000000, help='The max sequence length acceptable to fill any gaps, default: 1000000')
     parser.add_argument('-p', dest='prefix', default='quarTeT', help='The prefix used on generated files, default: quarTeT')
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
-    parser.add_argument('--fillonly', dest='fillonly', action='store_true', default=False, help='Only fill the gaps without join.')
-    parser.add_argument('--joinonly', dest='joinonly', action='store_true', default=False, help='Only join the gaps without fill.')
+    parser.add_argument('--enablejoin', dest='enablejoin', action='store_true', default=False, help='Enable join mode to close the gaps. (Unstable)')
+    parser.add_argument('--joinonly', dest='joinonly', action='store_true', default=False, help='Use only join mode without fill, should be used with --enablejoin.')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
 
@@ -235,7 +235,7 @@ if __name__ == '__main__':
     threads = parser.parse_args().threads
     minimapoption = parser.parse_args().minimapoption + f' -t {threads}'
     overwrite = parser.parse_args().overwrite
-    fillonly = parser.parse_args().fillonly
+    enablejoin = parser.parse_args().enablejoin
     joinonly = parser.parse_args().joinonly
 
     # check prerequisites
@@ -243,6 +243,6 @@ if __name__ == '__main__':
 
     # run
     args = [draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-            maxfillinglen, prefix, threads, minimapoption, overwrite, fillonly, joinonly]
-    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, fillonly={fillonly}, joinonly={joinonly}')
+            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly]
+    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}')
     quartet_util.run(GapFiller, args)

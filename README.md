@@ -8,6 +8,10 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.1.6
+- add new option 'maximum TR length' (-r) for CentroMiner to avoid trf stuck. (Thanks to atotickov, PR#22)
+- disable unstable 'join' mode for GapFiller by default. Use '--enablejoin' option to enable this mode. '--fillonly' option is removed.
+
 1.1.5
 - SVG output is moved to work dir instead of tmp dir. Intermediate file for figure drawing is saved to tmp dir instead of auto-remove.
 - Fix a bug that running multiple quarTeT in one folder may cause error due to intermediate file overwrite.
