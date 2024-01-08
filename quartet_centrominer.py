@@ -91,7 +91,7 @@ def centroMiner(args):
                 for line in te:
                     if line.startswith('#') or len(line.split()) < 3:
                         continue
-                    if line.split()[0] == Chr and 'LTR' in line.split()[2]:
+                    if line.split()[0] == Chr and ('LTR' in line.split()[2].upper() or 'LTR' in line.split()[8].upper()):
                         telist.append(line.split('\t'))
         
         # analysis blast result and build region info

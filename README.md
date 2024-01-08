@@ -8,6 +8,9 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.1.7
+- Support RepeatMasker's TE annotation format for CentroMiner module.
+
 1.1.6
 - add new option 'maximum TR length' (-r) for CentroMiner to avoid trf stuck. (Thanks to atotickov, PR#22)
 - disable unstable 'join' mode for GapFiller by default. Use '--enablejoin' option to enable this mode. '--fillonly' option is removed.
