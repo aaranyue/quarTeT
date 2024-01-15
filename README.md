@@ -241,6 +241,12 @@ TRfasta/                | The folder of all tandem repeat monomers identified by
 TRgff3/                 | The folder of all tandem repeat hit by BLAST on each chromosome, in gff3 format.
 ```
 
+**Note that manual selection is highly recommended.**
+
+In some species, best candidate may unexpectedly fall in near telomere region or other tandem repeat region.
+
+If the best candidate looks not reasonable, check top candidates in `candidate/` folder, and combine genome browser with TR, TE, and gene content, Hi-C heatmap, pairwise colinearity etc. to vote your candidates.
+
 ## Citation
 Yunzhi Lin, Chen Ye, Xingzhu Li, Qinyao Chen, Ying Wu, Feng Zhang, Rui Pan, Sijia Zhang, Shuxia Chen, Xu Wang, Shuo Cao, Yingzhen Wang, Yi Yue, Yongsheng Liu, Junyang Yue. quarTeT: a telomere-to-telomere toolkit for gap-free genome assembly and centromeric repeat identification. Horticulture Research 2023;10:uhad127, https://doi.org/10.1093/hr/uhad127
 
