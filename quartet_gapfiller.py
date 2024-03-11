@@ -23,20 +23,22 @@ def GapFiller(args):
             for gapsite in gapsitelist:
                 start = max(gapsite[0] - flanking, 0)
                 end = min(gapsite[1] + flanking, len(seq))
-                flankingdict[f'{sid}.{i}.L'] = seq[start:gapsite[0]]
-                flankingdict[f'{sid}.{i}.R'] = seq[gapsite[1]:end]
+                leftseq = seq[start:gapsite[0]]
+                rightseq = seq[gapsite[1]:end]
+                if 'N'*100 in leftseq or 'N'*100 in rightseq:
+                    print(f'[Warning] Flanking sequence of gap {sid}.{i} contains another gap. This indicates two gaps are too close and a very small contig is placed in between.')
+                else:
+                    flankingdict[f'{sid}.{i}.L'] = seq[start:gapsite[0]]
+                    flankingdict[f'{sid}.{i}.R'] = seq[gapsite[1]:end]
                 gapdict[f'{sid}.{i}'] = seq[gapsite[0]:gapsite[1]]
                 i += 1
     if flankingdict == {}:
-        print('[Error] Input genome does not have gap.')
+        print('[Error] Input genome does not have valid gap.')
         sys.exit(0)
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     flankingfastafile = f'tmp/{prefix}.gap.flanking.fasta'
     with open(flankingfastafile, 'w') as f:
         for sid, seq in flankingdict.items():
-            if 'N'*100 in seq:
-                print('[Error] Flanking sequence contains gap. Recommend to lower -f parameter or check your file.')
-                sys.exit(0)
             f.write(f'>{sid}\n{seq}\n')
     del draftgenomedict
     

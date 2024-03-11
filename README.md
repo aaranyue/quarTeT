@@ -8,6 +8,9 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.1.8
+- Gapfiller will throw a warning instead of error when flanking sequence contains gap.
+
 1.1.7
 - Support RepeatMasker's TE annotation format for CentroMiner module.
 
