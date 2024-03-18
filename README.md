@@ -119,8 +119,7 @@ you can convert `{prefix}.bp.hap1.p_ctg.gfa` and `{prefix}.bp.hap2.p_ctg.gfa` ge
 Usage: python3 quartet.py AssemblyMapper <parameters>
   -h, --help            show this help message and exit
   -r REFERENCE_GENOME   (*Required) Reference genome file, FASTA format.
-  -q CONTIGS
-                        (*Required) Phased contigs file, FASTA format.
+  -q CONTIGS            (*Required) Phased contigs file, FASTA format.
   -c MIN_CONTIG_LENGTH  Contigs shorter than INT (bp) will be removed, default: 50000
   -l MIN_ALIGNMENT_LENGTH
                         The min alignment length to be select (bp), default: 10000
@@ -138,6 +137,7 @@ Usage: python3 quartet.py AssemblyMapper <parameters>
                         Pass additional parameters to nucmer program.
   --deltafilteroption DELTAFILTEROPTION
                         Pass additional parameters to delta-filter program.
+
 ```
 Output files should be as follow:
 ```
@@ -170,8 +170,8 @@ Usage: python3 quartet.py GapFiller <parameters>
   -m MAX_FILLING_LEN    The max sequence length acceptable to fill any gaps, default: 1000000
   -p PREFIX             The prefix used on generated files, default: quarTeT
   -t THREADS            Use number of threads, default: 1
-  --fillonly            Only fill the gaps without join.
-  --joinonly            Only join the gaps without fill.
+  --enablejoin          Enable join mode to close the gaps. (Unstable)
+  --joinonly            Use only join mode without fill, should be used with --enablejoin.
   --overwrite           Overwrite existing alignment file instead of reuse.
   --minimapoption MINIMAPOPTION
                         Pass additional parameters to minimap2 program, default: -x asm5
@@ -233,6 +233,7 @@ Usage: python3 quartet.py CentroMiner <parameters>
   -p PREFIX             Prefix used by generated files. Default: quarTeT
   --trf [TRF_PARAMETER ...]
                         Change TRF parameters: <match> <mismatch> <delta> <PM> <PI> <minscore> Default: 2 7 7 80 10 50
+  -r MAX_TR_LENGTH      Maximum TR length (in millions) expected for trf. Default: 3
   --overwrite           Overwrite existing trf dat file instead of reuse.
 ```
 Output files should be as follow:
