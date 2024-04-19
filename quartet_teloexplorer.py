@@ -10,7 +10,7 @@ import quartet_util
 
 ### MAIN PROGRAM ###
 def teloExplorer(args):
-    genomefile, clade, minrepeattimes, prefix = args
+    genomefile, clade, minrepeattimes, prefix, noplot = args
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     tidkversion = float(subprocess.run(f'tidk -V', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode('utf-8').strip().split()[1][2:])
    
@@ -139,10 +139,11 @@ def teloExplorer(args):
             t.write(f'{chrid}\t{len(fasta[chrid])}\t{status[chrid]}\t{leftinfo}\t{rightinfo}\n')
     print(f'[Output] Telomere information write to: {teloinfofile}')
                 
-    agpfile = f'tmp/{prefix}.genome.agp'
-    if not os.path.exists(agpfile):
-        quartet_util.agpGap(genomefile, agpfile)
-    quartet_util.drawgenome(agpfile, f'{prefix}.telo', telofile=teloinfofile)
+    if noplot != True:
+        agpfile = f'tmp/{prefix}.genome.agp'
+        if not os.path.exists(agpfile):
+            quartet_util.agpGap(genomefile, agpfile)
+        quartet_util.drawgenome(agpfile, f'{prefix}.telo', telofile=teloinfofile)
 
 ### RUN ###
 if __name__ == '__main__':
@@ -152,18 +153,19 @@ if __name__ == '__main__':
     parser.add_argument('-c', dest='clade', choices=['plant', 'animal', 'other'], default='other', help='Specify clade of this genome. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore\'s suggestion, default: other')
     parser.add_argument('-m', dest='min_repeat_times', type=int, default=100, help='The min repeat times to be reported, default: 100')
     parser.add_argument('-p', dest='prefix', default='quarTeT', help='The prefix used on generated files, default: quarTeT')
-
+    parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
     # parse input paramater
     genomefile = quartet_util.decompress(parser.parse_args().genome)
     clade = parser.parse_args().clade
     minrepeattimes = parser.parse_args().min_repeat_times
     prefix = parser.parse_args().prefix
+    noplot = parser.parse_args().noplot
 
     # check prerequisites
-    quartet_util.check_prerequisite(['tidk', 'Rscript'])
+    quartet_util.check_prerequisite(['tidk'])
 
     # run
-    args = [genomefile, clade, minrepeattimes, prefix]
-    print(f'[Info] Paramater: genomefile={genomefile}, clade={clade}, minrepeattimes={minrepeattimes}, prefix={prefix}')
+    args = [genomefile, clade, minrepeattimes, prefix, noplot]
+    print(f'[Info] Paramater: genomefile={genomefile}, clade={clade}, minrepeattimes={minrepeattimes}, prefix={prefix}, noplot={noplot}')
     quartet_util.run(teloExplorer, args)
     

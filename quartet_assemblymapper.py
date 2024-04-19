@@ -9,7 +9,7 @@ import quartet_util
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, plot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
+    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
@@ -40,8 +40,8 @@ def AssemblyMapper(args):
     print('[Info] Checking telomere in contigs...')
     telofile = f'tmp/{prefix}.tig.telo.info'
     if not os.path.exists(telofile) or overwrite == True:
-        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info {prefix}.tig.telo.png {prefix}.tig.telo.svg', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig --noplot', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     monopolize = []
     forceleft = []
     forceright = []
@@ -77,8 +77,9 @@ def AssemblyMapper(args):
 
     # get all alignments
     allAlignment = {}
+    doplot = not noplot
     if aligner == 'mummer':
-        coordsfile = quartet_util.mummer(refgenomefile, contigfile, prefix, 'contig_map_ref', nucmeroption, deltafilteroption, True, overwrite)
+        coordsfile = quartet_util.mummer(refgenomefile, contigfile, prefix, 'contig_map_ref', nucmeroption, deltafilteroption, doplot, overwrite)
         
         with open(coordsfile, 'r') as f:
             for line in f:
@@ -99,7 +100,7 @@ def AssemblyMapper(args):
                 allAlignment[f'{refid}#{qryid}'] = alignment
 
     elif aligner == 'minimap2':
-        paffile = quartet_util.minimap(refgenomefile, contigfile, prefix, 'contig_map_ref', minimapoption, True, overwrite)
+        paffile = quartet_util.minimap(refgenomefile, contigfile, prefix, 'contig_map_ref', minimapoption, doplot, overwrite)
 
         with open(paffile, 'r') as f:
             for line in f:
@@ -255,7 +256,8 @@ def AssemblyMapper(args):
             info.write(f'{chrs}\t{len(chrfastadict[chrs])}\t{gapcount}\t{locus}\n')
     print(f'[Output] draft genome stat write to: {draftgenomestatfile}')
     
-    quartet_util.drawgenome(draftgenomeagpfile, f'{prefix}.draftgenome')
+    if doplot == True:
+        quartet_util.drawgenome(draftgenomeagpfile, f'{prefix}.draftgenome')
 
     # show colinearity in plot
     if plot == True:
@@ -279,6 +281,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', dest='aligner', choices=['minimap2', 'mummer'], default='minimap2', help='Specify alignment program (support minimap2 and mummer), default: minimap2')
     parser.add_argument('--nofilter', dest='nofilter', action='store_true', default=False, help='Use original sequence input, no filtering.')
     parser.add_argument('--plot', dest='plot', action='store_true', default=False, help='Plot a colinearity graph for draft genome to reference alignments. (will cost more time)')
+    parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
     parser.add_argument('--nucmeroption', dest='nucmeroption', default='', help='Pass additional parameters to nucmer program.')
@@ -298,8 +301,9 @@ if __name__ == '__main__':
     aligner = parser.parse_args().aligner
     nofilter = parser.parse_args().nofilter
     plot = parser.parse_args().plot
+    noplot = parser.parse_args().noplot
     overwrite = parser.parse_args().overwrite
-    quartet_util.check_prerequisite(['Rscript', 'delta-filter', 'mummerplot', 'show-coords', 'gnuplot'])
+    quartet_util.check_prerequisite(['delta-filter', 'show-coords'])
     if aligner == 'mummer':
         quartet_util.check_prerequisite(['nucmer'])
         nucmeroption = parser.parse_args().nucmeroption + f' -t {threads}'
@@ -313,6 +317,6 @@ if __name__ == '__main__':
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, nofilter, plot, overwrite, nucmeroption, deltafilteroption, minimapoption]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, plot={plot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
+            prefix, threads, aligner, nofilter, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption]
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
     quartet_util.run(AssemblyMapper, args)

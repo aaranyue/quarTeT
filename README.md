@@ -78,6 +78,7 @@ quarTeT command-line program is availble for Linux.
 - [gnuplot](https://github.com/gnuplot/gnuplot) (tested on 4.6 patchlevel 2 and 6) 
 - [R](https://www.R-project.org/) (>3.5.0, tested on 3.6.0 and 4.2.2) 
     - RIdeogram (tested on 0.2.2)
+    - ggplot2 (tested on 3.4.4 and 3.3.6)
 
 All these dependencies can be easily install via conda:
 

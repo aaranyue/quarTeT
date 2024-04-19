@@ -9,7 +9,7 @@ import quartet_util
 
 ### MAIN PROGRAM ###
 def GapFiller(args):
-    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly = args
+    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot = args
 
     # get gap's flanking seq
     print('[Info] Getting gaps flanking sequence...')
@@ -199,9 +199,10 @@ def GapFiller(args):
     print(f'[Output] Filled genome stat write to: {filledstatfile}')
     
     # make plot
-    agpfile = f'tmp/{prefix}.genome.agp'
-    quartet_util.agpGap(filledfastafile, agpfile)
-    quartet_util.drawgenome(agpfile, f'{prefix}.genome.filled')
+    if noplot != True:
+        agpfile = f'tmp/{prefix}.genome.agp'
+        quartet_util.agpGap(filledfastafile, agpfile)
+        quartet_util.drawgenome(agpfile, f'{prefix}.genome.filled')
 
 ### RUN ###
 if __name__ == '__main__':
@@ -219,6 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--joinonly', dest='joinonly', action='store_true', default=False, help='Use only join mode without fill, should be used with --enablejoin.')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
+    parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
 
     # parse input paramater
     draftgenomefile = quartet_util.decompress(parser.parse_args().draft_genome)
@@ -239,12 +241,13 @@ if __name__ == '__main__':
     overwrite = parser.parse_args().overwrite
     enablejoin = parser.parse_args().enablejoin
     joinonly = parser.parse_args().joinonly
+    noplot = parser.parse_args().noplot
 
     # check prerequisites
-    quartet_util.check_prerequisite(['minimap2', 'Rscript'])
+    quartet_util.check_prerequisite(['minimap2'])
 
     # run
     args = [draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly]
-    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}')
+            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot]
+    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')
     quartet_util.run(GapFiller, args)
