@@ -8,6 +8,12 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.2.0
+- CentroMiner is refactored. It can receive gene annotation as well now. The output has only 2 folders now: TandemRepeat (fasta, gff3 of TR) and Candidate (candidate info and TR, TE, and gene content line chart, require ggplot2). TE data is removed from candidate info. It is recommended to check the line chart to decide which candidate you vote.
+- '--noplot' option is added to each module. With this option, any ploting will be skiped. If you have problem in graphical issue, try this option.
+- CloserScore in GapFiller detail is changed to CloserIdentity.
+- Due to the major changes, the web server version of quarTeT will not be updated to the newest version for now.
+
 1.1.8
 - Gapfiller will throw a warning instead of error when flanking sequence contains gap.
 
@@ -64,7 +70,7 @@ Task include:
 
 ## Getting Started
 ### Use quarTeT on Web
-quarTeT can be easily accessed on [our web server](http://www.atcgn.com:8080/quarTeT/home.html).
+quarTeT can be easily accessed on [our web server](http://www.atcgn.com:8080/quarTeT/home.html). (Currently its version is lagged.)
 ### Use quarTeT on local
 quarTeT command-line program is availble for Linux.
 #### Dependencies
@@ -78,11 +84,11 @@ quarTeT command-line program is availble for Linux.
 - [gnuplot](https://github.com/gnuplot/gnuplot) (tested on 4.6 patchlevel 2 and 6) 
 - [R](https://www.R-project.org/) (>3.5.0, tested on 3.6.0 and 4.2.2) 
     - RIdeogram (tested on 0.2.2)
-    - ggplot2 (tested on 3.4.4 and 3.3.6)
+    - ggplot2 (tested on 3.3.6 and 3.4.4)
 
 All these dependencies can be easily install via conda:
 
-`conda create -n quartet --channel conda-forge --channel bioconda Python Minimap2 MUMmer4 trf CD-hit BLAST tidk R R-RIdeogram gnuplot`
+`conda create -n quartet --channel conda-forge --channel bioconda Python Minimap2 MUMmer4 trf CD-hit BLAST tidk R R-RIdeogram R-ggplot2 gnuplot`
 
 (Recently we discover that using conda to install R will result in blank PNG. However, SVG is correctly generated.)
 
@@ -131,6 +137,7 @@ Usage: python3 quartet.py AssemblyMapper <parameters>
   -a {minimap2,mummer}  Specify alignment program (support minimap2 and mummer), default: minimap2
   --nofilter            Use original sequence input, no filtering.
   --plot                Plot a colinearity graph for draft genome to reference alignments. (will cost more time)
+  --noplot              Skip all ploting.
   --overwrite           Overwrite existing alignment file instead of reuse.
   --minimapoption MINIMAPOPTION
                         Pass additional parameters to minimap2 program, default: -x asm5
@@ -138,7 +145,6 @@ Usage: python3 quartet.py AssemblyMapper <parameters>
                         Pass additional parameters to nucmer program.
   --deltafilteroption DELTAFILTEROPTION
                         Pass additional parameters to delta-filter program.
-
 ```
 Output files should be as follow:
 ```
@@ -157,6 +163,8 @@ GapFiller is a long-reads based gapfilling tool.
 A gap-tied genome and corresponding long-reads are required as input, both in fasta format.
 
 If possible, using long-reads assembled and polished contigs instead of reads may improve the quality.
+
+GapFiller support two mode: `fill` and `join`. `fill` means find a segment that can be placed in the gap and link them together. `join` means find an evidence that the gap edge is overlaped and can be directly merged into one. For now, `join` mode is unstable and disabled by default. If you want to enable it, be careful and check the result manually.
 ```
 Usage: python3 quartet.py GapFiller <parameters>
   -h, --help            show this help message and exit
@@ -176,6 +184,7 @@ Usage: python3 quartet.py GapFiller <parameters>
   --overwrite           Overwrite existing alignment file instead of reuse.
   --minimapoption MINIMAPOPTION
                         Pass additional parameters to minimap2 program, default: -x asm5
+  --noplot              Skip all ploting.
 ```
 Output files should be as follow:
 ```
@@ -197,6 +206,7 @@ Usage: python3 quartet.py TeloExplorer <parameters>
                         Specify clade of this genome. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore's suggestion, default: other
   -m MIN_REPEAT_TIMES   The min repeat times to be reported, default: 100
   -p PREFIX             The prefix used on generated files, default: quarTeT
+  --noplot              Skip all ploting.
 ```
 Output files should be as follow:
 ```
@@ -209,7 +219,7 @@ CentroMiner is a centromere prediction tool.
 
 A genome file in fasta format is required as input.
 
-Optionally, an addition input of TE annotation (or just LTR annotation) in gff3 format can improve the performance.
+Optionally, an additional input of TE annotation (or just LTR annotation) and gene annotation in gff3 format can improve the performance.
 
 It's recommended to obtain TE annotation using [EDTA](https://github.com/oushujun/EDTA).
 
@@ -217,12 +227,13 @@ It's recommended to obtain TE annotation using [EDTA](https://github.com/oushuju
 
 Note that the sequence ID in first column should be consistent with in genome. Some tools may change sequence ID if ID is too long.
 
-The sequence ontology in the third column should include "LTR" to be recognized.
+The sequence ontology in the third column should include `LTR` or `long_terminal_repeat` (EDTA default), or have `LTR` in the eighth column (RepeatMasker default) to be recognized.
 ```
 Usage: python3 quartet.py CentroMiner <parameters>
   -h, --help            show this help message and exit
   -i GENOME_FASTA       (*Required) Genome file, FASTA format.
   --TE TE               TE annotation file, gff3 format.
+  --gene GENE           gene annotation file, gff3 format.
   -n MIN_PERIOD         Min period to be consider as centromere repeat monomer. Default: 100
   -m MAX_PERIOD         Max period to be consider as centromere repeat monomer. Default: 200
   -s CLUSTER_IDENTITY   Min identity between TR monomers to be clustered (Cannot be smaller than 0.8). Default: 0.8
@@ -236,21 +247,19 @@ Usage: python3 quartet.py CentroMiner <parameters>
                         Change TRF parameters: <match> <mismatch> <delta> <PM> <PI> <minscore> Default: 2 7 7 80 10 50
   -r MAX_TR_LENGTH      Maximum TR length (in millions) expected for trf. Default: 3
   --overwrite           Overwrite existing trf dat file instead of reuse.
+  --noplot              Skip all ploting.
 ```
 Output files should be as follow:
 ```
-{prefix}.best.candidate | The best centromere candidate on each chromosome, and corresponding monomers.
-{prefix}.centro.png     | The figure draws best centromere candidate location, alongside relative length of chromosomes and gap locations for assembly.
-candidate/              | The folder of all centromere candidates. Check here if the best candidate doesn't look well.
-TRfasta/                | The folder of all tandem repeat monomers identified by trf and cluster result on each chromosome.
-TRgff3/                 | The folder of all tandem repeat hit by BLAST on each chromosome, in gff3 format.
+Candidates/             | The folder of all centromere candidates data on each chromosome. Check the pdf line chart and vote a best candidate.
+TandemRepeat/           | The folder of all tandem repeat monomers identified by trf and cluster result on each chromosome.
 ```
 
 **Note that manual selection is highly recommended.**
 
 In some species, best candidate may unexpectedly fall in near telomere region or other tandem repeat region.
 
-If the best candidate looks not reasonable, check top candidates in `candidate/` folder, and combine genome browser with TR, TE, and gene content, Hi-C heatmap, pairwise colinearity etc. to vote your candidates.
+You can combine the gene, TR and TE line chart with Hi-C contact heatmap, pairwise colinearity etc. to better vote your candidates. Mostly the centromere region is riched in TR, surrounded by rich TE, and low in gene content, but there are also exceptions. 
 
 ## Citation
 Yunzhi Lin, Chen Ye, Xingzhu Li, Qinyao Chen, Ying Wu, Feng Zhang, Rui Pan, Sijia Zhang, Shuxia Chen, Xu Wang, Shuo Cao, Yingzhen Wang, Yi Yue, Yongsheng Liu, Junyang Yue. quarTeT: a telomere-to-telomere toolkit for gap-free genome assembly and centromeric repeat identification. Horticulture Research 2023;10:uhad127, https://doi.org/10.1093/hr/uhad127
