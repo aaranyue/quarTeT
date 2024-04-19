@@ -64,6 +64,24 @@ def reversedseq(seq: str):
     seq = seq.replace('E', 'G')
     return seq
 
+def calculate_cover_length(intervals, left, right):
+    # sort and merge intervals
+    intervals.sort(key=lambda x: x[0])
+    merged = []
+    for i in intervals:
+        if not merged or merged[-1][1] < i[0]:
+            merged.append(i)
+        else:
+            merged[-1][1] = max(merged[-1][1], i[1])
+    # calculate
+    cover_length = 0
+    for i in merged:
+        if i[1] <= left or i[0] >= right:
+            continue
+        else:
+            cover_length += min(i[1], right) - max(i[0], left)
+    return cover_length
+
 def changeSuffix(filename, newsuffix):
     namelist = filename.split('.')
     namelist[-1] = newsuffix
