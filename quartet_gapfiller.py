@@ -110,7 +110,7 @@ def GapFiller(args):
                 if Laln['strand'] == '-':
                     Laln, Raln = Raln, Laln
                 if Laln['refend'] < Raln['refstart'] and joinonly != True:
-                    score = Laln['identity'] + Raln['identity']
+                    score = (Laln['identity'] + Raln['identity']) / 2
                     if score > bestscore:
                         fillstart = Laln['refend'] + Laln['qrylen'] - Laln['qryend'] + 1
                         fillend = Raln['refstart'] - Raln['qrystart']
@@ -125,8 +125,8 @@ def GapFiller(args):
                         continue
                     else:
                         gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': 'join',
-                                                'seq': '', 'strand': '', 
-                                                'score': -1}
+                                                'seq': '', 'strand': Laln['strand'], 
+                                                'score': (Laln['identity'] + Raln['identity']) / 2}
     
     print(f'[Info] All files processed.')
     if gapcloserdict == {}:
@@ -139,7 +139,7 @@ def GapFiller(args):
     with open(filldetailfile, 'w') as de:
         totalfilledlen = sum([len(gapcloserdict[x]['seq']) for x in gapcloserdict])
         de.write(f'# Gap Closed: {len(gapcloserdict)}\n# Total Filled length: {totalfilledlen}\n# Gap Remains: {len(gapdict)-len(gapcloserdict)}\n')
-        de.write('# Seqid\tGap_identifier\tStatus\tCloserTigID\tCloserRange\tCloserLength\tCloserStrand\tCloserScore\n')
+        de.write('# Seqid\tGap_identifier\tStatus\tCloserTigID\tCloserRange\tCloserLength\tCloserStrand\tCloserIdentity\n')
         for gapid in gapdict:
             if gapid in gapcloserdict:
                 info = gapcloserdict[gapid]
