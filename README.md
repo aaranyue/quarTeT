@@ -8,6 +8,9 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.2.1
+- Fix a bug in CentroMiner that ploting halted when optional gene/TE annotation file is not given. 
+
 1.2.0
 - CentroMiner is refactored. It can receive gene annotation as well now. The output has only 2 folders now: TandemRepeat (fasta, gff3 of TR) and Candidate (candidate info and TR, TE, and gene content line chart, require ggplot2). TE data is removed from candidate info. It is recommended to check the line chart to decide which candidate you vote.
 - '--noplot' option is added to each module. With this option, any ploting will be skiped. If you have problem in graphical issue, try this option.
