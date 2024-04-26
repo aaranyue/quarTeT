@@ -176,10 +176,12 @@ def centroMiner(args):
                     r = i + 50000
                     v1 = quartet_util.calculate_cover_length(trintervals, l, r)
                     tsv.write(f'{i}\t{v1}\tTR\n')
-                    v2 = quartet_util.calculate_cover_length(teintervals, l, r)
-                    tsv.write(f'{i}\t{v2}\tTE\n')
-                    v3 = quartet_util.calculate_cover_length(geintervals, l, r)
-                    tsv.write(f'{i}\t{v3}\tgene\n')
+                    if tegfffile != None:
+                        v2 = quartet_util.calculate_cover_length(teintervals, l, r)
+                        tsv.write(f'{i}\t{v2}\tTE\n')
+                    if genegfffile != None:
+                        v3 = quartet_util.calculate_cover_length(geintervals, l, r)
+                        tsv.write(f'{i}\t{v3}\tgene\n')
             rscript = f'library(ggplot2);options(scipen=999);data<-read.table("{tsvfile}");colnames(data)<-c("site","value","type");data$site<-as.numeric(data$site);data$value<-as.numeric(data$value);pdf("{pdffile}");ggplot(data,aes(x=site,y=value,group=type,color=type,shape=type))+geom_line()+labs(x="Position",y="Length (bp)")+theme(axis.text.x=element_text(angle=90,hjust=0.5))+scale_x_continuous(breaks=seq(0,max(data$site),1000000),minor_breaks=seq(0,max(data$site),500000))+facet_wrap(~type,scales="free_y",dir="v")'
             subprocess.run(f"echo '{rscript}' | Rscript -", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
