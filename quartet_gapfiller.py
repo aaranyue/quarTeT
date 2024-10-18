@@ -56,7 +56,7 @@ def GapFiller(args):
             if 'N'*100 in seq:
                 needsplit = True
                 i = 1
-                for tig in re.split(r'N+', seq):
+                for tig in re.split(r'N{100,}', seq):
                     gapfilldict[f'{sid}_tig{i}'] = tig
                     i += 1
             else:
@@ -158,7 +158,7 @@ def GapFiller(args):
                 w.write(f'>{sid}\n{seq}\n')
                 chrfastadict[sid] = seq
             else:
-                seqlist = re.split(r'N+', seq)
+                seqlist = re.split(r'N{100,}', seq)
                 for i in range(len(seqlist) - 1):
                     gapid = f'{sid}.{i+1}'
                     if gapid in gapcloserdict:

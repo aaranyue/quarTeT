@@ -21,7 +21,7 @@ def AssemblyMapper(args):
         for tigid, seq in inputdict.items():
             if 'N'*100 in seq:
                 i = 1
-                for tig in re.split(r'N+', seq):
+                for tig in re.split(r'N{100,}', seq):
                     totaldict[f'{tigid}.{i}'] = tig
                     if len(tig) >= mincontiglength:
                         contigsdict[f'{tigid}.{i}'] = tig
