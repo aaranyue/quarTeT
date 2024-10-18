@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Last modified: V1.2.2
 
 import sys
 import argparse
@@ -178,7 +179,7 @@ def GapFiller(args):
                 newseq = ''
                 for i in range(len(seqlist)):
                     subseq, agp5, agp6, agp7, agp8, agp9 = seqlist[i]
-                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(subseq)}\t{i}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
+                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(newseq)+len(subseq)}\t{i+1}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
                     newseq += subseq
                 w.write(f'>{sid}\n{newseq}\n')
                 chrfastadict[f'{sid}'] = newseq

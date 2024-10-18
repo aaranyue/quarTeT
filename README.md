@@ -8,6 +8,11 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.2.2
+- Add new '--keep' option for AssemblyMapper, which add all unplaced contigs in the draft genome.
+- Add a new output AGP file for GapFiller to describe the modified chromosome structure.
+- Fix another bug that cause small number of N representing unknown bases are identified as gap.
+
 1.2.1
 - Fix a bug in CentroMiner that ploting halted when optional gene/TE annotation file is not given. 
 
@@ -139,6 +144,7 @@ Usage: python3 quartet.py AssemblyMapper <parameters>
   -t THREADS            Use number of threads, default: 1
   -a {minimap2,mummer}  Specify alignment program (support minimap2 and mummer), default: minimap2
   --nofilter            Use original sequence input, no filtering.
+  --keep                Keep the unplaced contigs in draft genome
   --plot                Plot a colinearity graph for draft genome to reference alignments. (will cost more time)
   --noplot              Skip all ploting.
   --overwrite           Overwrite existing alignment file instead of reuse.
@@ -191,10 +197,11 @@ Usage: python3 quartet.py GapFiller <parameters>
 ```
 Output files should be as follow:
 ```
-{prefix}.genome.filled.fasta   | The gap-filled genome, fasta format.
-{prefix}.genome.filled.detail  | Detailed information for each gap, including gap closed and remains, total filled size and closer's ID, range, etc.
-{prefix}.genome.filled.stat    | The statistic of filled genome, including total size and each chromosome's size, GC content, gap count and locations.
-{prefix}.genome.filled.png     | The figure draws relative length of chromosomes and gap locations for assembly.
+{prefix}.genome.filled.fasta        | The gap-filled genome, fasta format.
+{prefix}.genome.filled.modified.agp | The modified chromosome structure, AGP format.
+{prefix}.genome.filled.detail       | Detailed information for each gap, including gap closed and remains, total filled size and closer's ID, range, etc.
+{prefix}.genome.filled.stat         | The statistic of filled genome, including total size and each chromosome's size, GC content, gap count and locations.
+{prefix}.genome.filled.png          | The figure draws relative length of chromosomes and gap locations for assembly.
 ```
 
 ### TeloExplorer
