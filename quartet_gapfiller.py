@@ -150,25 +150,40 @@ def GapFiller(args):
     
     # make fasta
     filledfastafile = f'{prefix}.genome.filled.fasta'
+    filledragpfile = f'{prefix}.genome.filled.modified.agp'
     draftgenomedict = quartet_util.readFastaAsDict(draftgenomefile)
-    with open(filledfastafile, 'w') as w:
+    with open(filledfastafile, 'w') as w, open(filledragpfile, 'w') as ragp:
         chrfastadict = {}
         for sid, seq in draftgenomedict.items():
             if sid not in ['.'.join(gapid.split('.')[:-1]) for gapid in gapcloserdict]:
                 w.write(f'>{sid}\n{seq}\n')
                 chrfastadict[sid] = seq
             else:
-                seqlist = re.split(r'N{100,}', seq)
+                matches = list(re.finditer(r'N{100,}', seq))
+                seqlist = []
+                start = 0
+                for match in matches:
+                    end = match.start()
+                    seqlist.append((seq[start:end], 'P', sid, start + 1, end, '+'))
+                    start = match.end()
+                seqlist.append((seq[start:], 'P', sid, start + 1, len(seq), '+'))
+                # seqlist: (seq, agp[5~9])
                 for i in range(len(seqlist) - 1):
                     gapid = f'{sid}.{i+1}'
                     if gapid in gapcloserdict:
-                        seqlist.insert(2*i+1, gapcloserdict[gapid]['seq'])
+                        if gapcloserdict[gapid]['range'] != 'join':
+                            seqlist.insert(2*i+1, (gapcloserdict[gapid]['seq'], 'W', gapcloserdict[gapid]['sid'], gapcloserdict[gapid]['range'].split('-')[0], gapcloserdict[gapid]['range'].split('-')[1], gapcloserdict[gapid]['strand']))
                     else:
-                        seqlist.insert(2*i+1, gapdict[gapid])
-                seq = ''.join(seqlist)
-                w.write(f'>{sid}\n{seq}\n')
-                chrfastadict[f'{sid}'] = seq
+                        seqlist.insert(2*i+1, (gapdict[gapid], 'U' if len(gapdict[gapid]) == 100 else 'N', len(gapdict[gapid]), 'scaffold', 'yes', 'unspecified'))
+                newseq = ''
+                for i in range(len(seqlist)):
+                    subseq, agp5, agp6, agp7, agp8, agp9 = seqlist[i]
+                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(subseq)}\t{i}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
+                    newseq += subseq
+                w.write(f'>{sid}\n{newseq}\n')
+                chrfastadict[f'{sid}'] = newseq
     print(f'[Output] Filled genome fasta file write to: {filledfastafile}')
+    print(f'[Output] Modified chromosome agp file write to: {filledragpfile}')
                 
     # make stat
     filledstatfile = f'{prefix}.genome.filled.stat'
