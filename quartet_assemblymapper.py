@@ -9,7 +9,7 @@ import quartet_util
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
+    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
@@ -224,6 +224,10 @@ def AssemblyMapper(args):
     with open(draftgenomefastafile, 'w') as fa:
         for chrs, seq in sorted(chrfastadict.items(), key=lambda x: x[0]):
             fa.write(f'>{chrs}\n{seq}\n')
+        if keep == True:
+            for [tigid, tiglen, target] in contiginfo:
+                if target == 'TooShort' or target == 'NoAlignment':
+                    fa.write(f'>{tigid}\n{contigsdict[tigid]}\n')
     if os.path.getsize(draftgenomefastafile) == 0:
         print('[Error] No Chromosome can be assembly.')
         sys.exit(0)
@@ -234,6 +238,10 @@ def AssemblyMapper(args):
         agplist.sort(key=lambda x: x[0])
         for inf in agplist:
             agp.write("\t".join([str(x) for x in inf]) + '\n')
+        if keep == True:
+            for [tigid, tiglen, target] in contiginfo:
+                if target == 'TooShort' or target == 'NoAlignment':
+                    agp.write(f"{tigid}\t1\t{tiglen}\t1\tW\t{tigid}\t1\t{tiglen}\t+\n")
     print(f'[Output] draft genome agp file write to: {draftgenomeagpfile}')
 
     draftgenomestatfile = f'{prefix}.draftgenome.stat'
@@ -280,6 +288,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
     parser.add_argument('-a', dest='aligner', choices=['minimap2', 'mummer'], default='minimap2', help='Specify alignment program (support minimap2 and mummer), default: minimap2')
     parser.add_argument('--nofilter', dest='nofilter', action='store_true', default=False, help='Use original sequence input, no filtering.')
+    parser.add_argument('--keep', dest='keep', action='store_true', default=False, help='Keep the unplaced contigs in draft genome')
     parser.add_argument('--plot', dest='plot', action='store_true', default=False, help='Plot a colinearity graph for draft genome to reference alignments. (will cost more time)')
     parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
@@ -300,6 +309,7 @@ if __name__ == '__main__':
     threads = parser.parse_args().threads
     aligner = parser.parse_args().aligner
     nofilter = parser.parse_args().nofilter
+    keep = parser.parse_args().keep
     plot = parser.parse_args().plot
     noplot = parser.parse_args().noplot
     overwrite = parser.parse_args().overwrite
@@ -317,6 +327,6 @@ if __name__ == '__main__':
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, nofilter, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
+            prefix, threads, aligner, nofilter, keep, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption]
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
     quartet_util.run(AssemblyMapper, args)
