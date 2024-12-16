@@ -9,7 +9,7 @@ Task include:
 
 ## Version Change log
 1.2.3
-- Add new '--extract-ref-flanks' option for AssemblyMapper, which allow chimeric contig output for gap filling. (see issue #42 for detail)
+- Add new '--extract-ref-flanks' option for AssemblyMapper, which allow chimeric contig output for gap filling. (see [issue #42](https://github.com/aaranyue/quarTeT/issues/42) for detail)
 - Support Unimap as aligner. As a optimized version of minimap2, it still use the '--minimapoption'.
 - Fix a bug that monopolizer contig length standard is too high.
 - Deprecate the web server for maintenance issue (sorry!).
@@ -35,7 +35,7 @@ Task include:
 - Support RepeatMasker's TE annotation format for CentroMiner module.
 
 1.1.6
-- add new option 'maximum TR length' (-r) for CentroMiner to avoid trf stuck. (Thanks to atotickov, PR #22)
+- add new option 'maximum TR length' (-r) for CentroMiner to avoid trf stuck. (Thanks to atotickov, [PR #22](https://github.com/aaranyue/quarTeT/pull/22))
 - disable unstable 'join' mode for GapFiller by default. Use '--enablejoin' option to enable this mode. '--fillonly' option is removed.
 
 1.1.5
