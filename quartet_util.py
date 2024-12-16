@@ -1,4 +1,4 @@
-# Last modified: V1.2.0
+# Last modified: V1.2.3
 import time
 import sys
 import math
@@ -113,16 +113,16 @@ def mummer(reffasta, qryfasta, prefix, suffix, nucmeroption, deltafilteroption, 
     subprocess.run(f'mv -t tmp -f {prefix}.{suffix}.gp {prefix}.{suffix}.fplot {prefix}.{suffix}.rplot {prefix}.{suffix}.delta {prefix}.{suffix}.filter.delta {prefix}.{suffix}.coords', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     return f'tmp/{prefix}.{suffix}.coords'
 
-def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite):
-    print('[Info] Running minimap2...')
+def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite, aligner):
+    print(f'[Info] Running {aligner}...')
     subprocess.run(f'mv -t ./ -f tmp/{prefix}.{suffix}.paf', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if not os.path.exists(f'{prefix}.{suffix}.paf') or overwrite == True:
-        cmdr = subprocess.run(f'minimap2 {minimapoption} -c -o {prefix}.{suffix}.paf {reffasta} {qryfasta}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        cmdr = subprocess.run(f'{aligner} {minimapoption} -c -o {prefix}.{suffix}.paf {reffasta} {qryfasta}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         if '[morecore]' in cmdr.stderr.decode("utf-8") or cmdr.returncode < 0:
             print(f'[Error] Memory insufficient.')
             sys.exit(0)
         elif cmdr.returncode != 0:
-            print(f'[Error] Unexcepted error occur in minimap2 as follow:')
+            print(f'[Error] Unexcepted error occur in {aligner} as follow:')
             print(f'cmd: {cmdr.args}')
             print(f'returncode: {cmdr.returncode}')
             print('stdout:')
