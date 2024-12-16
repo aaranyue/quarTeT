@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.2.2
+# Last modified: V1.2.3
 
 import argparse
 import subprocess
@@ -10,7 +10,7 @@ import quartet_util
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
+    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
@@ -54,7 +54,7 @@ def AssemblyMapper(args):
                 if line.startswith('#'):
                     continue
                 tigid, tiglen, status = line.split()[0:3]
-                if status == 'both' and int(tiglen) >= minchrlen:
+                if status == 'both' and int(tiglen) >= minchrlen / 2:
                     monopolize.append(tigid)
                 elif status == 'left':
                     forceleft.append(tigid)
@@ -100,8 +100,8 @@ def AssemblyMapper(args):
                     alignment['sumnegative'] += int(qrylen)
                 allAlignment[f'{refid}#{qryid}'] = alignment
 
-    elif aligner == 'minimap2':
-        paffile = quartet_util.minimap(refgenomefile, contigfile, prefix, 'contig_map_ref', minimapoption, doplot, overwrite)
+    elif aligner == 'minimap2' or aligner == 'unimap':
+        paffile = quartet_util.minimap(refgenomefile, contigfile, prefix, 'contig_map_ref', minimapoption, doplot, overwrite, aligner)
 
         with open(paffile, 'r') as f:
             for line in f:
@@ -111,7 +111,7 @@ def AssemblyMapper(args):
                 if float(match) / float(alignlen) < minalignmentidentity:
                     continue
                 if f'{refid}#{qryid}' not in allAlignment:
-                    alignment = {'refid': refid, 'qryid': qryid, 'weight': 0, 'sumposition': 0, 'sumpositive': 0, 'sumnegative': 0, 'score': 0}
+                    alignment = {'refid': refid, 'qryid': qryid, 'weight': 0, 'sumposition': 0, 'sumpositive': 0, 'sumnegative': 0, 'score': 0, 'refstart': 0, 'refend': 0}
                 else:
                     alignment = allAlignment[f'{refid}#{qryid}']
                 alignment['weight'] += int(alignlen)
@@ -121,6 +121,10 @@ def AssemblyMapper(args):
                     alignment['sumpositive'] += int(alignlen)
                 else:
                     alignment['sumnegative'] += int(alignlen)
+                if alignment['refstart'] < int(refstart):
+                    alignment['refstart'] = int(refstart)
+                if alignment['refend'] < int(refend):
+                    alignment['refend'] = int(refend)
                 allAlignment[f'{refid}#{qryid}'] = alignment
     if allAlignment == {}:
         print(f'[Error] All alignments are filtered. Recommended to adjust filter arguments.')
@@ -134,11 +138,11 @@ def AssemblyMapper(args):
         if alignment['qryid'] in monopolize:
             strand = '+' if alignment['sumpositive'] >= alignment['sumnegative'] else '-'
             if alignment['qryid'] not in map:
-                map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': 0, 'strand': strand}
+                map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': 0, 'strand': strand, 'refstart': alignment['refstart'], 'refend': alignment['refend']}
             else:
                 # solve double mapping by score
                 if alignment['score'] > map[alignment['qryid']]['score']:
-                    map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': 0, 'strand': strand}
+                    map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': 0, 'strand': strand, 'refstart': alignment['refstart'], 'refend': alignment['refend']}
     monopolizedchr = [y['refid'] for x, y in map.items()]
 
     for key, alignment in allAlignment.items():
@@ -151,11 +155,11 @@ def AssemblyMapper(args):
             else:
                 position = alignment['sumposition'] / alignment['weight']
             if alignment['qryid'] not in map:
-                map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': position, 'strand': strand}
+                map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': position, 'strand': strand, 'refstart': alignment['refstart'], 'refend': alignment['refend']}
             else:
                 # solve double mapping by score
                 if alignment['score'] > map[alignment['qryid']]['score']:
-                    map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': position, 'strand': strand}
+                    map[alignment['qryid']] = {'refid': alignment['refid'], 'score': alignment['score'], 'position': position, 'strand': strand, 'refstart': alignment['refstart'], 'refend': alignment['refend']}
 
                      
     # write all contigs' destination
@@ -187,6 +191,25 @@ def AssemblyMapper(args):
         for [tigid, tiglen, target] in contiginfo:
             w.write(f'{tigid}\t{tiglen}\t{target}\n')
     print(f'[Output] Mapping result for each contigs write to: {contigmapinfofile}')
+
+    # chimera option
+    if chimera != 0:
+        refdict = quartet_util.readFastaAsDict(refgenomefile)
+        with open(f'{prefix}.chimera_contig.fasta', 'w') as nw:
+            for tigid in map:
+                refid = map[tigid]['refid']
+                refstart = map[tigid]['refstart']
+                refend = map[tigid]['refend']
+                strand = map[tigid]['strand']
+                tigseq = totaldict[tigid]
+                left = max(refstart-chimera, 1)
+                right = min(refend+chimera, len(refdict[refid]))
+                if strand == '+':
+                    seqout = refdict[refid][left-1:refstart] + tigseq + refdict[refid][refend:right+1]
+                else:
+                    seqout = quartet_util.reversedseq(refdict[refid][refend:right+1]) + tigseq + quartet_util.reversedseq(refdict[refid][left-1:refstart])
+                nw.write(f'>{tigid}_chimera_{refid}_{left}~{refstart}+this+{refend}~{right}\n{seqout}\n')
+        print(f'[Output] Chimeric contigs write to: {prefix}.chimera_contig.fasta')
 
     # check if all Chr have contigs mapped.
     mappedchrlist = []
@@ -273,8 +296,8 @@ def AssemblyMapper(args):
         print('[Info] Aligning draft and ref to plot...')
         if aligner == 'mummer':
             quartet_util.mummer(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_mummer_ref', nucmeroption, deltafilteroption, plot, overwrite)
-        if aligner == 'minimap2':
-            quartet_util.minimap(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_map_ref', minimapoption, plot, overwrite)
+        if aligner == 'minimap2' or aligner == 'unimap':
+            quartet_util.minimap(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_map_ref', minimapoption, plot, overwrite, aligner)
 
 ### RUN ###
 if __name__ == '__main__':
@@ -287,13 +310,14 @@ if __name__ == '__main__':
     parser.add_argument('-i', dest='min_alignment_identity', type=float, default=90, help='The min alignment identity to be select (%%), default: 90')
     parser.add_argument('-p', dest='prefix', default='quarTeT', help='The prefix used on generated files, default: quarTeT')
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
-    parser.add_argument('-a', dest='aligner', choices=['minimap2', 'mummer'], default='minimap2', help='Specify alignment program (support minimap2 and mummer), default: minimap2')
+    parser.add_argument('-a', dest='aligner', choices=['minimap2', 'unimap', 'mummer'], default='minimap2', help='Specify alignment program (support minimap2, unimap and mummer), default: minimap2')
     parser.add_argument('--nofilter', dest='nofilter', action='store_true', default=False, help='Use original sequence input, no filtering.')
     parser.add_argument('--keep', dest='keep', action='store_true', default=False, help='Keep the unplaced contigs in draft genome')
+    parser.add_argument('--extract-ref-flanks', dest='chimera', type=int, default=0, help='Add an output of chimera contig containing reference flanks of x bp (check issue#42 for detail), default: 0 (off)')
     parser.add_argument('--plot', dest='plot', action='store_true', default=False, help='Plot a colinearity graph for draft genome to reference alignments. (will cost more time)')
     parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
-    parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
+    parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2/unimap program, default: -x asm5')
     parser.add_argument('--nucmeroption', dest='nucmeroption', default='', help='Pass additional parameters to nucmer program.')
     parser.add_argument('--deltafilteroption', dest='deltafilteroption', default='', help='Pass additional parameters to delta-filter program.')
 
@@ -311,6 +335,7 @@ if __name__ == '__main__':
     aligner = parser.parse_args().aligner
     nofilter = parser.parse_args().nofilter
     keep = parser.parse_args().keep
+    chimera = parser.parse_args().chimera
     plot = parser.parse_args().plot
     noplot = parser.parse_args().noplot
     overwrite = parser.parse_args().overwrite
@@ -320,14 +345,14 @@ if __name__ == '__main__':
         nucmeroption = parser.parse_args().nucmeroption + f' -t {threads}'
         deltafilteroption = parser.parse_args().deltafilteroption + f' -l {minalignmentlength} -i {minalignmentidentity}'
         minimapoption = ''
-    if aligner == 'minimap2':
-        quartet_util.check_prerequisite(['minimap2'])
+    if aligner == 'minimap2' or aligner == 'unimap':
+        quartet_util.check_prerequisite([aligner])
         nucmeroption = ''
         deltafilteroption = ''
         minimapoption = parser.parse_args().minimapoption + f' -t {threads}'
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, nofilter, keep, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
+            prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption]
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
     quartet_util.run(AssemblyMapper, args)
