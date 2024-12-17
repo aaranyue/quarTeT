@@ -8,6 +8,10 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.2.4
+- Add new '--teclade' and '--teminrepeattimes' option for AssemblyMapper to control the behavior of built-in TeloExplorer.
+- Add new '-a' option for GapFiller to select unimap as aligner. (Also fix the bug that default aligner not set in GapFiller after v1.2.3, thanks to a927050047, [PR #46](https://github.com/aaranyue/quarTeT/pull/46)) 
+
 1.2.3
 - Add new '--extract-ref-flanks' option for AssemblyMapper, which allow chimeric contig output for gap filling. (see [issue #42](https://github.com/aaranyue/quarTeT/issues/42) for detail)
 - Support Unimap as aligner. As a optimized version of minimap2, it still use the '--minimapoption'.
@@ -202,6 +206,7 @@ Usage: python3 quartet.py GapFiller <parameters>
   -i MIN_ALIGNMENT_IDENTITY
                         The min alignment identity to be select (%), default: 40
   -m MAX_FILLING_LEN    The max sequence length acceptable to fill any gaps, default: 1000000
+  -a {minimap2,unimap}  Specify alignment program (support minimap2 and unimap), default: minimap2
   -p PREFIX             The prefix used on generated files, default: quarTeT
   -t THREADS            Use number of threads, default: 1
   --enablejoin          Enable join mode to close the gaps. (Unstable)
