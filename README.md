@@ -165,6 +165,10 @@ Usage: python3 quartet.py AssemblyMapper <parameters>
                         Pass additional parameters to nucmer program.
   --deltafilteroption DELTAFILTEROPTION
                         Pass additional parameters to delta-filter program.
+  --teclade {plant,animal,other}
+                        Specify clade of this genome for telomere search. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore's suggestion, default: other
+  --teminrepeattimes TE_MIN_REPEAT_TIMES
+                        The min repeat times to considered as telomere, default: 100
 ```
 Output files should be as follow:
 ```

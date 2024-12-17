@@ -10,7 +10,7 @@ import quartet_util
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption = args
+    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes = args
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
@@ -41,7 +41,7 @@ def AssemblyMapper(args):
     print('[Info] Checking telomere in contigs...')
     telofile = f'tmp/{prefix}.tig.telo.info'
     if not os.path.exists(telofile) or overwrite == True:
-        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig --noplot', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig --noplot -c {teclade} -m {teminrepeattimes}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     monopolize = []
     forceleft = []
@@ -320,6 +320,8 @@ if __name__ == '__main__':
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2/unimap program, default: -x asm5')
     parser.add_argument('--nucmeroption', dest='nucmeroption', default='', help='Pass additional parameters to nucmer program.')
     parser.add_argument('--deltafilteroption', dest='deltafilteroption', default='', help='Pass additional parameters to delta-filter program.')
+    parser.add_argument('--teclade', dest='te_clade', choices=['plant', 'animal', 'other'], default='other', help='Specify clade of this genome for telomere search. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore\'s suggestion, default: other')
+    parser.add_argument('--teminrepeattimes', dest='te_min_repeat_times', type=int, default=100, help='The min repeat times to considered as telomere, default: 100')
 
     # parse input paramater
     refgenomefile = quartet_util.decompress(parser.parse_args().reference_genome)
@@ -339,6 +341,8 @@ if __name__ == '__main__':
     plot = parser.parse_args().plot
     noplot = parser.parse_args().noplot
     overwrite = parser.parse_args().overwrite
+    teclade = parser.parse_args().te_clade
+    teminrepeattimes = parser.parse_args().te_min_repeat_times
     quartet_util.check_prerequisite(['delta-filter', 'show-coords'])
     if aligner == 'mummer':
         quartet_util.check_prerequisite(['nucmer'])
@@ -353,6 +357,6 @@ if __name__ == '__main__':
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}')  
+            prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes]
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}')  
     quartet_util.run(AssemblyMapper, args)
