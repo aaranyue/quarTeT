@@ -77,7 +77,7 @@ def GapFiller(args):
         del gapfillfasta
         del gapfilldict
 
-        pafgapfillfile = quartet_util.minimap(gapfillfile, flankingfastafile, prefix, f'flank_map_{gapfiller}', minimapoption, False, overwrite)
+        pafgapfillfile = quartet_util.minimap(gapfillfile, flankingfastafile, prefix, f'flank_map_{gapfiller}', minimapoption, False, overwrite,"minimap2")
 
         allalignment = []
         with open(pafgapfillfile, 'r') as paf:
