@@ -8,6 +8,9 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.2.5
+- Add new '--groupcontig' option for AssemblyMapper. Adding this option will output a folder containing contigs grouped by reference sequence (will group unassigned contigs into one).
+
 1.2.4
 - Add new '--teclade' and '--teminrepeattimes' option for AssemblyMapper to control the behavior of built-in TeloExplorer.
 - Add new '-a' option for GapFiller to select unimap as aligner. (Also fix the bug that default aligner not set in GapFiller after v1.2.3, thanks to a927050047, [PR #46](https://github.com/aaranyue/quarTeT/pull/46)) 
@@ -158,6 +161,7 @@ Usage: python3 quartet.py AssemblyMapper <parameters>
                         Specify alignment program (support minimap2, unimap and mummer), default: minimap2
   --nofilter            Use original sequence input, no filtering.
   --keep                Keep the unplaced contigs in draft genome
+  --groupcontig         Add an folder output of contigs grouped by destination.
   --extract-ref-flanks CHIMERA
                         Add an output of chimera contig containing reference flanks of x bp (check issue#42 for detail), default: 0 (off)
   --plot                Plot a colinearity graph for draft genome to reference alignments. (will cost more time)

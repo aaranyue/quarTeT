@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.2.4
+# Last modified: V1.2.5
 
 import argparse
 import subprocess
@@ -10,7 +10,7 @@ import quartet_util
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes = args
+    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes = args
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
@@ -192,6 +192,16 @@ def AssemblyMapper(args):
             w.write(f'{tigid}\t{tiglen}\t{target}\n')
     print(f'[Output] Mapping result for each contigs write to: {contigmapinfofile}')
 
+    # group contig option
+    if groupcontig == True:
+        subprocess.run(f'rm -rf {prefix}.groupcontig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        subprocess.run(f'mkdir {prefix}.groupcontig', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        for [tigid, tiglen, target] in contiginfo:
+            file_path = f"{prefix}.groupcontig/{target}.tig.fasta"
+            with open(file_path, 'a') as file:
+                file.write(f">{tigid}\n{totaldict[tigid]}\n")
+        print(f'[Output] grouped contigs write to: {prefix}.groupcontig/')
+
     # chimera option
     if chimera != 0:
         refdict = quartet_util.readFastaAsDict(refgenomefile)
@@ -313,6 +323,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', dest='aligner', choices=['minimap2', 'unimap', 'mummer'], default='minimap2', help='Specify alignment program (support minimap2, unimap and mummer), default: minimap2')
     parser.add_argument('--nofilter', dest='nofilter', action='store_true', default=False, help='Use original sequence input, no filtering.')
     parser.add_argument('--keep', dest='keep', action='store_true', default=False, help='Keep the unplaced contigs in draft genome')
+    parser.add_argument('--groupcontig', dest='groupcontig', action='store_true', default=False, help='Add an folder output of contigs grouped by destination.')
     parser.add_argument('--extract-ref-flanks', dest='chimera', type=int, default=0, help='Add an output of chimera contig containing reference flanks of x bp (check issue#42 for detail), default: 0 (off)')
     parser.add_argument('--plot', dest='plot', action='store_true', default=False, help='Plot a colinearity graph for draft genome to reference alignments. (will cost more time)')
     parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
@@ -337,6 +348,7 @@ if __name__ == '__main__':
     aligner = parser.parse_args().aligner
     nofilter = parser.parse_args().nofilter
     keep = parser.parse_args().keep
+    groupcontig = parser.parse_args().groupcontig
     chimera = parser.parse_args().chimera
     plot = parser.parse_args().plot
     noplot = parser.parse_args().noplot
@@ -357,6 +369,6 @@ if __name__ == '__main__':
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, nofilter, keep, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}')  
+            prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes]
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, groupcontig={groupcontig}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}')  
     quartet_util.run(AssemblyMapper, args)
