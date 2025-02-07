@@ -103,16 +103,14 @@ quarTeT command-line program is availble for Linux.
 - [CD-hit](https://github.com/weizhongli/cdhit) (tested on 4.6 and 4.8.1) 
 - [BLAST+](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (tested on 2.8.1 and 2.11.0) 
 - [tidk](https://github.com/tolkit/telomeric-identifier) (tested on 0.2.1 and 0.2.31) 
-- [gnuplot](https://github.com/gnuplot/gnuplot) (tested on 4.6 patchlevel 2 and 6) 
+- [gnuplot](https://github.com/gnuplot/gnuplot) (tested on 4.6 and 5.4) 
 - [R](https://www.R-project.org/) (>3.5.0, tested on 3.6.0 and 4.2.2) 
     - RIdeogram (tested on 0.2.2)
     - ggplot2 (tested on 3.3.6 and 3.4.4)
 
 All these dependencies can be easily install via conda:
 
-`conda create -n quartet --channel conda-forge --channel bioconda Python Minimap2 MUMmer4 trf CD-hit BLAST tidk R R-RIdeogram R-ggplot2 gnuplot`
-
-(Recently we discover that using conda to install R will result in blank PNG. However, SVG is correctly generated.)
+`conda create -n quarTeTdependencies --channel conda-forge --channel bioconda python=3.11.4 minimap2=2.26 mummer4=4.0.0rc1 trf=4.09.1 cd-hit=4.8.1 blast=2.14.0 tidk=0.2.31 r=4.3 r-rideogram=0.2.2 r-ggplot2=3.4.4 gnuplot=5.4 unimap=0.1`
 
 #### Installation
 quarTeT do not require installation.
