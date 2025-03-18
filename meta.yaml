@@ -1,0 +1,40 @@
+# Not sure whether this works or not. Modified from AI suggestion.
+package:
+  name: quartet
+  version: "1.2.5"
+
+source:
+  git_url: https://github.com/aaranyue/quarTeT.git
+  git_rev: v1.2.5
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv"
+
+requirements:
+  build:
+    - python >=3.6
+    - pip
+  run:
+    - python >=3.6
+    - minimap2 >=2.24
+    - unimap >=0.1
+    - mummer4 >=4.0.0rc1
+    - trf >=4.09
+    - cd-hit >=4.8.1
+    - blast >=2.11.0
+    - tidk >=0.2.31
+    - gnuplot >=5.4
+    - r-base >=3.5.0
+    - r-rideogram >=0.2.2
+    - r-ggplot2 >=3.4.4
+
+test:
+  imports:
+    - quartet
+
+about:
+  home: https://github.com/aaranyue/quarTeT
+  license: MIT
+  summary: "A telomere-to-telomere toolkit for gap-free genome assembly and centromeric repeat identification"
+  

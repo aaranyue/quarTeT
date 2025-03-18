@@ -294,6 +294,26 @@ In some species, best candidate may unexpectedly fall in near telomere region or
 
 You can combine the gene, TR and TE line chart with Hi-C contact heatmap, pairwise colinearity etc. to better vote your candidates. Mostly the centromere region is riched in TR, surrounded by rich TE, and low in gene content, but there are also exceptions. 
 
+candidate file header:
+
+```
+Line with no indent showed a candidate region:
+Chr, start, end, length: where this region located and length
+TRlength: tandem repeat total length in this region
+TRcoverage: how much present the tandem repeat cover this region
+
+Line with indent showed a kind of tandem repeat in the region above:
+subTR: an identifier for this tandem repeat
+period: the length of the tandem repeat monomer
+subTRlength: total length of this kind of tandem repeat in the region above
+subTRcoverage: how much present of this kind of tandem repeat in the region above
+pattern: the tandem repeat monomer sequence
+```
+
+It has been reported that called TRF program sometimes stucked at high entropy or high complexity regions.
+
+If this should happened, lower `-r` option may help. If it doesn't work, try hard-masking that region.
+
 ## Citation
 Yunzhi Lin, Chen Ye, Xingzhu Li, Qinyao Chen, Ying Wu, Feng Zhang, Rui Pan, Sijia Zhang, Shuxia Chen, Xu Wang, Shuo Cao, Yingzhen Wang, Yi Yue, Yongsheng Liu, Junyang Yue. quarTeT: a telomere-to-telomere toolkit for gap-free genome assembly and centromeric repeat identification. Horticulture Research 2023;10:uhad127, https://doi.org/10.1093/hr/uhad127
 
