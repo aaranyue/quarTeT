@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.2.1
+# Last modified: V1.2.5r2
 
 import subprocess
 import os
@@ -37,7 +37,7 @@ def centroMiner(args):
         datfile = f'tmp/trfdat/{prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat'
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
         if not os.path.exists(datfile) or overwrite == True:
-            subprocess.run(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            quartet_util.runsub(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', 'trf', 1, False)
         subprocess.run(f'mv -t tmp/trfdat -f {prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         with open(datfile, 'r') as trfResult:
             linelist = []
@@ -58,11 +58,11 @@ def centroMiner(args):
 
         # blast chr with patterns
         clusterfastafile = f'TandemRepeat/{prefix}.{Chr}.tr.cluster.fasta'
-        subprocess.run(f'cd-hit-est -i {trfastafile} -o {clusterfastafile} -c {identity} -n {wordlength} -S {periodmaxdelta} -M 0', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        quartet_util.runsub(f'cd-hit-est -i {trfastafile} -o {clusterfastafile} -c {identity} -n {wordlength} -S {periodmaxdelta} -M 0', 'cd-hit-est')
         blastdb = f'tmp/splitchr/{prefix}.{Chr}'
-        subprocess.run(f'makeblastdb -dbtype nucl -in {splitchrfastafile} -out {blastdb}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        quartet_util.runsub(f'makeblastdb -dbtype nucl -in {splitchrfastafile} -out {blastdb}', 'makeblastdb')
         blastresultfile = f'tmp/blast/{prefix}.{Chr}.tr.blast'
-        subprocess.run(f'blastn -db {blastdb} -query {clusterfastafile} -out {blastresultfile} -outfmt 7 -evalue {e}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        quartet_util.runsub(f'blastn -db {blastdb} -query {clusterfastafile} -out {blastresultfile} -outfmt 7 -evalue {e}', 'blastn')
 
         # build TR annotation
         blastgff3file = f'TandemRepeat/{prefix}.{Chr}.tr.blast.gff3'
@@ -189,8 +189,17 @@ def centroMiner(args):
         print(f'[Info] {Chr} done.')
         
     # multithread
-    def print_error(value):
-        print("error: ", value)
+    def print_error(e):
+        if isinstance(e, subprocess.CalledProcessError):
+            error_msg = (
+                f'[Error] Unexpected error occurred in subprocess:\n'
+                f'cmd: {e.cmd}\n'
+                f'returncode: {e.returncode}\n'
+                f'stdout:\n{e.output.decode("utf-8")}\n'
+                f'stderr:\n{e.stderr.decode("utf-8")}'
+            )
+            print(error_msg)
+
     print('[Info] Processing each chromosome...')
     p = Pool(min(len(genomedictkey), int(threads)))
     for Chr in genomedictkey:

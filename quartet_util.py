@@ -1,4 +1,4 @@
-# Last modified: V1.2.3
+# Last modified: V1.2.5r2
 import time
 import sys
 import math
@@ -301,14 +301,21 @@ convertSVG("{outprefix}.svg", file = "{outprefix}", device = "png")'''
     else:
         print(f'[Output] Chromosome plot write to: {outprefix}.png')
     
-def runsub(cmd, name):
+def runsub(cmd, name, successcode=0, exitonerror=True):
     cmdr = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    if cmdr.returncode != 0:
-        print(f'[Error] Unexcepted error occur in {name} as follow:')
-        print(f'cmd: {cmdr.args}')
-        print(f'returncode: {cmdr.returncode}')
-        print('stdout:')
-        print(cmdr.stdout.decode("utf-8"))
-        print('stderr:')
-        print(cmdr.stderr.decode("utf-8"))
-        sys.exit(1)
+    if cmdr.returncode != successcode:
+        error_msg = (
+            f'[Error] Unexpected error occurred in {name}:\n'
+            f'cmd: {cmdr.args}\n'
+            f'returncode: {cmdr.returncode}\n'
+            f'stdout:\n{cmdr.stdout.decode("utf-8")}\n'
+            f'stderr:\n{cmdr.stderr.decode("utf-8")}'
+        )
+        print(error_msg)
+        if exitonerror:
+            raise subprocess.CalledProcessError(
+                returncode=cmdr.returncode,
+                cmd=cmdr.args,
+                output=cmdr.stdout,
+                stderr=cmdr.stderr,
+            )

@@ -10,6 +10,7 @@ Task include:
 ## Version Change log
 1.2.5
 - Add new '--groupcontig' option for AssemblyMapper. Adding this option will output a folder containing contigs grouped by reference sequence (will group unassigned contigs into one).
+- Improve error report in CentroMiner module.
 
 1.2.4
 - Add new '--teclade' and '--teminrepeattimes' option for AssemblyMapper to control the behavior of built-in TeloExplorer.
