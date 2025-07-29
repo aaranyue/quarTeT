@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.2.5
+# Last modified: V1.2.5r3
 
 import argparse
 import subprocess
@@ -261,7 +261,7 @@ def AssemblyMapper(args):
         if keep == True:
             for [tigid, tiglen, target] in contiginfo:
                 if target == 'TooShort' or target == 'NoAlignment':
-                    fa.write(f'>{tigid}\n{contigsdict[tigid]}\n')
+                    fa.write(f'>{tigid}\n{totaldict[tigid]}\n')
     if os.path.getsize(draftgenomefastafile) == 0:
         print('[Error] No Chromosome can be assembly.')
         sys.exit(0)

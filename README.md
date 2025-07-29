@@ -11,6 +11,7 @@ Task include:
 1.2.5
 - Add new '--groupcontig' option for AssemblyMapper. Adding this option will output a folder containing contigs grouped by reference sequence (will group unassigned contigs into one).
 - Improve error report in CentroMiner module.
+- Fix a bug that '--keep' option for AssemblyMapper refers to the wrong dictionary.
 
 1.2.4
 - Add new '--teclade' and '--teminrepeattimes' option for AssemblyMapper to control the behavior of built-in TeloExplorer.
@@ -116,7 +117,7 @@ All these dependencies can be easily install via conda:
 #### Installation
 quarTeT do not require installation.
 
-Just clone this repository, and run `python3 {path}/quartet.py`
+Just clone this repository with `git clone https://github.com/aaranyue/quarTeT`, and run `python3 {path}/quartet.py`
 
 ## Usage
 ```
