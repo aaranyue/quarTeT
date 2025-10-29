@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 usage = '''quarTeT: Telomere-to-telomere Toolkit
-version 1.2.5r3
+version 1.2.5r4
 
 Usage: python3 quartet.py <module> <parameters>
 
@@ -25,15 +25,15 @@ if __name__ == '__main__':
         if module not in ['AssemblyMapper', 'GapFiller', 'CentroMiner', 'TeloExplorer', 'am', 'gf', 'cm', 'te', '-h', '--help']:
             print('Unexpected parameters. Use -h for help.')
             sys.exit(0)
-        parameter = '' if len(sys.argv) == 2 else ' '.join(sys.argv[2:])
+        parameter = [] if len(sys.argv) == 2 else sys.argv[2:]
     
     if module == 'AssemblyMapper' or module == 'am':
-        subprocess.run(f'python3 {sys.path[0]}/quartet_assemblymapper.py {parameter}', shell=True)
+        subprocess.run(['python3', f'{sys.path[0]}/quartet_assemblymapper.py'] + parameter)
     elif module == 'GapFiller' or module == 'gf':
-        subprocess.run(f'python3 {sys.path[0]}/quartet_gapfiller.py {parameter}', shell=True)
+        subprocess.run(['python3', f'{sys.path[0]}/quartet_gapfiller.py'] + parameter)
     elif module == 'CentroMiner' or module == 'cm':
-        subprocess.run(f'python3 {sys.path[0]}/quartet_centrominer.py {parameter}', shell=True)
+        subprocess.run(['python3', f'{sys.path[0]}/quartet_centrominer.py'] + parameter)
     elif module == 'TeloExplorer' or module == 'te':
-        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py {parameter}', shell=True)
+        subprocess.run(['python3', f'{sys.path[0]}/quartet_teloexplorer.py'] + parameter)
     elif module == '-h' or module == '--help':
         print(usage)
