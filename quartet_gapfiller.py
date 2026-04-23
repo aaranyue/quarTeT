@@ -8,19 +8,67 @@ import os
 import re
 import quartet_util
 
+def evaluate_suffix_prefix_overlap(left_seq, right_seq, min_identity, min_overlap, max_check_len):
+    left_check = left_seq[-max_check_len:] if len(left_seq) > max_check_len else left_seq
+    right_check = right_seq[:max_check_len] if len(right_seq) > max_check_len else right_seq
+    max_overlap = min(len(left_check), len(right_check))
+    if max_overlap == 0:
+        return {'status': 'no_overlap', 'length': 0, 'identity': 0}
+    min_overlap = max(1, min(min_overlap, max_overlap))
+    best_any = None
+    best_long = None
+    best_valid = None
+    for overlap_len in range(max_overlap, 0, -1):
+        left_overlap = left_check[-overlap_len:]
+        right_overlap = right_check[:overlap_len]
+        match_count = sum(1 for left_base, right_base in zip(left_overlap, right_overlap) if left_base == right_base)
+        overlap_identity = match_count / overlap_len
+        current = {'length': overlap_len, 'identity': overlap_identity, 'match_count': match_count}
+        if best_any is None or current['match_count'] > best_any['match_count'] or (current['match_count'] == best_any['match_count'] and current['length'] > best_any['length']):
+            best_any = current
+        if overlap_len >= min_overlap:
+            if best_long is None or current['identity'] > best_long['identity'] or (current['identity'] == best_long['identity'] and current['length'] > best_long['length']):
+                best_long = current
+            if overlap_identity >= min_identity:
+                best_valid = current
+                break
+    if best_valid is not None:
+        return {'status': 'pass', 'length': best_valid['length'], 'identity': best_valid['identity']}
+    if best_any is None or best_any['match_count'] == 0:
+        return {'status': 'no_overlap', 'length': 0, 'identity': 0}
+    if best_long is None:
+        return {'status': 'overlap_too_short', 'length': best_any['length'], 'identity': best_any['identity']}
+    return {'status': 'overlap_identity_too_low', 'length': best_long['length'], 'identity': best_long['identity']}
+
+def update_joinattempt(joinattemptdict, gapid, status, info):
+    if gapid not in joinattemptdict:
+        joinattemptdict[gapid] = {'status': status, **info}
+        return
+    if status == 'Joined':
+        joinattemptdict[gapid] = {'status': status, **info}
+        return
+    if joinattemptdict[gapid]['status'] == 'Joined':
+        return
+    prevscore = joinattemptdict[gapid].get('score', -1)
+    newscore = info.get('score', -1)
+    if newscore >= prevscore:
+        joinattemptdict[gapid] = {'status': status, **info}
+
 ### MAIN PROGRAM ###
 def GapFiller(args):
-    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner = args
+    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, joinminoverlap, joinminidentity, noplot, aligner = args
 
     # get gap's flanking seq
     print('[Info] Getting gaps flanking sequence...')
     draftgenomedict = quartet_util.readFastaAsDict(draftgenomefile)
     flankingdict = {}
     gapdict = {}
+    gapcomponentdict = {}
     for sid, seq in draftgenomedict.items():
         if 'N'*100 in seq:
             i = 1
             gapsitelist = [r.span() for r in re.finditer(r'N+', seq)]
+            prev_gap_end = 0
             for gapsite in gapsitelist:
                 start = max(gapsite[0] - flanking, 0)
                 end = min(gapsite[1] + flanking, len(seq))
@@ -32,6 +80,20 @@ def GapFiller(args):
                     flankingdict[f'{sid}.{i}.L'] = seq[start:gapsite[0]]
                     flankingdict[f'{sid}.{i}.R'] = seq[gapsite[1]:end]
                 gapdict[f'{sid}.{i}'] = seq[gapsite[0]:gapsite[1]]
+                left_component_start = prev_gap_end + 1
+                left_component_end = gapsite[0]
+                right_component_start = gapsite[1] + 1
+                if i < len(gapsitelist):
+                    right_component_end = gapsitelist[i][0]
+                else:
+                    right_component_end = len(seq)
+                gapcomponentdict[f'{sid}.{i}'] = {
+                    'left_seq': seq[left_component_start-1:left_component_end],
+                    'right_seq': seq[right_component_start-1:right_component_end],
+                    'left_range': (left_component_start, left_component_end),
+                    'right_range': (right_component_start, right_component_end),
+                }
+                prev_gap_end = gapsite[1]
                 i += 1
     if flankingdict == {}:
         print('[Error] Input genome does not have valid gap.')
@@ -45,6 +107,7 @@ def GapFiller(args):
     
     # process gapfilling file(s)
     gapcloserdict = {}
+    joinattemptdict = {}
     for gapfillfile in gapclosercontigfilelist:
         gapfiller = os.path.basename(gapfillfile)
         print(f'[Info] gapfilling with {gapfiller}...')
@@ -121,13 +184,86 @@ def GapFiller(args):
                         gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': f'{fillstart}-{fillend}',
                                                 'seq': fillseq if Laln['strand'] == '+' else quartet_util.reversedseq(fillseq), 'strand': Laln['strand'], 
                                                 'score': score}
+                        bestscore = score
                 elif Laln['refend'] >= Raln['refstart'] and enablejoin == True:
+                    joinscore = (Laln['identity'] + Raln['identity']) / 2
                     if bestscore != 0:
+                        continue
+                    componentinfo = gapcomponentdict.get(gapid)
+                    if componentinfo == None:
+                        continue
+                    min_overlap = min(joinminoverlap, len(componentinfo['left_seq']), len(componentinfo['right_seq']))
+                    overlapinfo = evaluate_suffix_prefix_overlap(
+                        componentinfo['left_seq'],
+                        componentinfo['right_seq'],
+                        joinminidentity,
+                        min_overlap,
+                        flanking,
+                    )
+                    if overlapinfo['status'] == 'no_overlap':
+                        update_joinattempt(joinattemptdict, gapid, 'Failed', {
+                            'sid': f'{gapfillfile}@{Laln["refid"]}',
+                            'strand': Laln['strand'],
+                            'score': joinscore,
+                            'reason': 'no_overlap',
+                            'left_range': componentinfo['left_range'],
+                            'right_range': componentinfo['right_range'],
+                            'join_overlap': overlapinfo['length'],
+                            'join_identity': overlapinfo['identity'],
+                        })
+                        continue
+                    if overlapinfo['status'] == 'overlap_too_short':
+                        update_joinattempt(joinattemptdict, gapid, 'Failed', {
+                            'sid': f'{gapfillfile}@{Laln["refid"]}',
+                            'strand': Laln['strand'],
+                            'score': joinscore,
+                            'reason': 'overlap_too_short',
+                            'left_range': componentinfo['left_range'],
+                            'right_range': componentinfo['right_range'],
+                            'join_overlap': overlapinfo['length'],
+                            'join_identity': overlapinfo['identity'],
+                        })
+                        continue
+                    if overlapinfo['status'] == 'overlap_identity_too_low':
+                        update_joinattempt(joinattemptdict, gapid, 'Failed', {
+                            'sid': f'{gapfillfile}@{Laln["refid"]}',
+                            'strand': Laln['strand'],
+                            'score': joinscore,
+                            'reason': 'overlap_identity_too_low',
+                            'left_range': componentinfo['left_range'],
+                            'right_range': componentinfo['right_range'],
+                            'join_overlap': overlapinfo['length'],
+                            'join_identity': overlapinfo['identity'],
+                        })
+                        continue
+                    if overlapinfo['length'] >= len(componentinfo['right_seq']):
+                        update_joinattempt(joinattemptdict, gapid, 'Failed', {
+                            'sid': f'{gapfillfile}@{Laln["refid"]}',
+                            'strand': Laln['strand'],
+                            'score': joinscore,
+                            'reason': 'overlap_too_long',
+                            'left_range': componentinfo['left_range'],
+                            'right_range': componentinfo['right_range'],
+                            'join_overlap': overlapinfo['length'],
+                            'join_identity': overlapinfo['identity'],
+                        })
                         continue
                     else:
                         gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': 'join',
                                                 'seq': '', 'strand': Laln['strand'], 
-                                                'score': (Laln['identity'] + Raln['identity']) / 2}
+                                                'score': joinscore,
+                                                'join_overlap': overlapinfo['length'],
+                                                'join_identity': overlapinfo['identity']}
+                        update_joinattempt(joinattemptdict, gapid, 'Joined', {
+                            'sid': f'{gapfillfile}@{Laln["refid"]}',
+                            'strand': Laln['strand'],
+                            'score': joinscore,
+                            'left_range': componentinfo['left_range'],
+                            'right_range': componentinfo['right_range'],
+                            'join_overlap': overlapinfo['length'],
+                            'join_identity': overlapinfo['identity'],
+                        })
+                        bestscore = gapcloserdict[gapid]['score']
     
     print(f'[Info] All files processed.')
     if gapcloserdict == {}:
@@ -137,6 +273,7 @@ def GapFiller(args):
     # make detail
     print(f'[Info] Generating filled fasta file and statistics...')
     filldetailfile = f'{prefix}.genome.filled.detail'
+    joindetailfile = f'{prefix}.genome.join.detail'
     with open(filldetailfile, 'w') as de:
         totalfilledlen = sum([len(gapcloserdict[x]['seq']) for x in gapcloserdict])
         de.write(f'# Gap Closed: {len(gapcloserdict)}\n# Total Filled length: {totalfilledlen}\n# Gap Remains: {len(gapdict)-len(gapcloserdict)}\n')
@@ -148,39 +285,95 @@ def GapFiller(args):
             else:
                 de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tNot_closed\n')
     print(f'[Output] Filling detail write to: {filldetailfile}')
+    joincount = len([gapid for gapid in gapcloserdict if gapcloserdict[gapid]['range'] == 'join'])
+    joinfailcount = len([gapid for gapid in joinattemptdict if joinattemptdict[gapid]['status'] == 'Failed'])
+    joinfailreasoncount = {
+        'no_overlap': 0,
+        'overlap_too_short': 0,
+        'overlap_identity_too_low': 0,
+        'overlap_too_long': 0,
+    }
+    for gapid in joinattemptdict:
+        info = joinattemptdict[gapid]
+        if info['status'] == 'Failed' and info['reason'] in joinfailreasoncount:
+            joinfailreasoncount[info['reason']] += 1
+    with open(joindetailfile, 'w') as jd:
+        jd.write(f'# Gap Joined: {joincount}\n')
+        jd.write(f'# Gap Join Failed: {joinfailcount}\n')
+        jd.write(f'# Failed_no_overlap: {joinfailreasoncount["no_overlap"]}\n')
+        jd.write(f'# Failed_overlap_too_short: {joinfailreasoncount["overlap_too_short"]}\n')
+        jd.write(f'# Failed_overlap_identity_too_low: {joinfailreasoncount["overlap_identity_too_low"]}\n')
+        jd.write(f'# Failed_overlap_too_long: {joinfailreasoncount["overlap_too_long"]}\n')
+        jd.write('# Seqid\tGap_identifier\tStatus\tCloserTigID\tCloserStrand\tCloserIdentity\tLeftComponentRange\tRightComponentRange\tRightTrimmedRange\tJoinOverlapLength\tJoinOverlapIdentity\tReason\n')
+        for gapid in gapdict:
+            if gapid in joinattemptdict:
+                info = joinattemptdict[gapid]
+                left_range = info.get('left_range', ('NA', 'NA'))
+                right_range = info.get('right_range', ('NA', 'NA'))
+                if info['status'] == 'Joined':
+                    right_keep_start = right_range[0] + info['join_overlap']
+                    right_trimmed_range = f'{right_keep_start}-{right_range[1]}'
+                    reason = 'NA'
+                else:
+                    right_trimmed_range = 'NA'
+                    reason = info.get('reason', 'unknown')
+                jd.write(
+                    f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\t{info["status"]}\t{info.get("sid", "NA")}\t{info.get("strand", "NA")}\t{info.get("score", "NA")}\t'
+                    f'{left_range[0]}-{left_range[1]}\t'
+                    f'{right_range[0]}-{right_range[1]}\t'
+                    f'{right_trimmed_range}\t{info.get("join_overlap", "NA")}\t{info.get("join_identity", "NA")}\t{reason}\n'
+                )
+    print(f'[Output] Join detail write to: {joindetailfile}')
     
     # make fasta
     filledfastafile = f'{prefix}.genome.filled.fasta'
     filledragpfile = f'{prefix}.genome.filled.modified.agp'
     draftgenomedict = quartet_util.readFastaAsDict(draftgenomefile)
+    closedsidset = {'.'.join(gapid.split('.')[:-1]) for gapid in gapcloserdict}
     with open(filledfastafile, 'w') as w, open(filledragpfile, 'w') as ragp:
         chrfastadict = {}
         for sid, seq in draftgenomedict.items():
-            if sid not in ['.'.join(gapid.split('.')[:-1]) for gapid in gapcloserdict]:
+            if sid not in closedsidset:
                 w.write(f'>{sid}\n{seq}\n')
                 chrfastadict[sid] = seq
             else:
                 matches = list(re.finditer(r'N{100,}', seq))
-                seqlist = []
+                segments = []
                 start = 0
                 for match in matches:
                     end = match.start()
-                    seqlist.append((seq[start:end], 'P', sid, start + 1, end, '+'))
+                    segments.append((seq[start:end], start + 1, end))
                     start = match.end()
-                seqlist.append((seq[start:], 'P', sid, start + 1, len(seq), '+'))
-                # seqlist: (seq, agp[5~9])
-                for i in range(len(seqlist) - 1):
+                segments.append((seq[start:], start + 1, len(seq)))
+                seqlist = []
+                if segments[0][0] != '':
+                    seqlist.append((segments[0][0], 'P', sid, segments[0][1], segments[0][2], '+'))
+                for i in range(len(matches)):
                     gapid = f'{sid}.{i+1}'
+                    nextseq, nextstart, nextend = segments[i+1]
                     if gapid in gapcloserdict:
                         if gapcloserdict[gapid]['range'] != 'join':
-                            seqlist.insert(2*i+1, (gapcloserdict[gapid]['seq'], 'W', gapcloserdict[gapid]['sid'], gapcloserdict[gapid]['range'].split('-')[0], gapcloserdict[gapid]['range'].split('-')[1], gapcloserdict[gapid]['strand']))
+                            seqlist.append((gapcloserdict[gapid]['seq'], 'W', gapcloserdict[gapid]['sid'], gapcloserdict[gapid]['range'].split('-')[0], gapcloserdict[gapid]['range'].split('-')[1], gapcloserdict[gapid]['strand']))
+                            if nextseq != '':
+                                seqlist.append((nextseq, 'P', sid, nextstart, nextend, '+'))
+                        else:
+                            trimlen = gapcloserdict[gapid]['join_overlap']
+                            trimmedseq = nextseq[trimlen:]
+                            trimmedstart = nextstart + trimlen
+                            if trimmedseq != '':
+                                seqlist.append((trimmedseq, 'P', sid, trimmedstart, nextend, '+'))
                     else:
-                        seqlist.insert(2*i+1, (gapdict[gapid], 'U' if len(gapdict[gapid]) == 100 else 'N', len(gapdict[gapid]), 'scaffold', 'yes', 'unspecified'))
+                        seqlist.append((gapdict[gapid], 'U' if len(gapdict[gapid]) == 100 else 'N', len(gapdict[gapid]), 'scaffold', 'yes', 'unspecified'))
+                        if nextseq != '':
+                            seqlist.append((nextseq, 'P', sid, nextstart, nextend, '+'))
                 newseq = ''
-                for i in range(len(seqlist)):
-                    subseq, agp5, agp6, agp7, agp8, agp9 = seqlist[i]
-                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(newseq)+len(subseq)}\t{i+1}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
+                partnum = 1
+                for subseq, agp5, agp6, agp7, agp8, agp9 in seqlist:
+                    if subseq == '':
+                        continue
+                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(newseq)+len(subseq)}\t{partnum}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
                     newseq += subseq
+                    partnum += 1
                 w.write(f'>{sid}\n{newseq}\n')
                 chrfastadict[f'{sid}'] = newseq
     print(f'[Output] Filled genome fasta file write to: {filledfastafile}')
@@ -235,6 +428,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
     parser.add_argument('--enablejoin', dest='enablejoin', action='store_true', default=False, help='Enable join mode to close the gaps. (Unstable)')
     parser.add_argument('--joinonly', dest='joinonly', action='store_true', default=False, help='Use only join mode without fill, should be used with --enablejoin.')
+    parser.add_argument('--join-min-overlap', dest='join_min_overlap', type=int, default=50, help='The min overlap length required for join on draft genome components (bp), default: 50')
+    parser.add_argument('--join-min-identity', dest='join_min_identity', type=float, default=30, help='The min overlap identity required for join on draft genome components (%%), default: 30')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
     parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
@@ -259,6 +454,14 @@ if __name__ == '__main__':
     aligner = parser.parse_args().aligner
     enablejoin = parser.parse_args().enablejoin
     joinonly = parser.parse_args().joinonly
+    joinminoverlap = int(parser.parse_args().join_min_overlap)
+    if joinminoverlap < 1:
+        print('[Error] join_min_overlap should be at least 1.')
+        sys.exit(0)
+    joinminidentity = float(parser.parse_args().join_min_identity) / 100
+    if joinminidentity < 0 or joinminidentity > 1:
+        print('[Error] join_min_identity should be within 0~100.')
+        sys.exit(0)
     noplot = parser.parse_args().noplot
 
     # check prerequisites
@@ -266,6 +469,6 @@ if __name__ == '__main__':
 
     # run
     args = [draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner]
-    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')
+            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, joinminoverlap, joinminidentity, noplot, aligner]
+    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, joinminoverlap={joinminoverlap}, joinminidentity={joinminidentity}, noplot={noplot}')
     quartet_util.run(GapFiller, args)
