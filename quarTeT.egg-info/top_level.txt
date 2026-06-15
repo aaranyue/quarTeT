@@ -1,0 +1,6 @@
+quartet
+quartet_assemblymapper
+quartet_centrominer
+quartet_gapfiller
+quartet_teloexplorer
+quartet_util

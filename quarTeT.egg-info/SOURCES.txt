@@ -1,0 +1,14 @@
+LICENSE
+README.md
+quartet.py
+quartet_assemblymapper.py
+quartet_centrominer.py
+quartet_gapfiller.py
+quartet_teloexplorer.py
+quartet_util.py
+setup.py
+quarTeT.egg-info/PKG-INFO
+quarTeT.egg-info/SOURCES.txt
+quarTeT.egg-info/dependency_links.txt
+quarTeT.egg-info/entry_points.txt
+quarTeT.egg-info/top_level.txt

@@ -6,7 +6,7 @@ import sys
 usage = '''quarTeT: Telomere-to-telomere Toolkit
 version 1.2.5r4
 
-Usage: python3 quartet.py <module> <parameters>
+Usage: quartet <module> <parameters>
 
 Modules:
 AssemblyMapper\t| am\tAssemble draft genome.
@@ -16,7 +16,8 @@ CentroMiner\t| cm\tIdentify centromere candidates.
 
 Use <module> -h for module usage.'''
 
-if __name__ == '__main__':
+
+def main():
     if len(sys.argv) == 1:
         print(usage)
         sys.exit(0)
@@ -37,3 +38,7 @@ if __name__ == '__main__':
         subprocess.run(['python3', f'{sys.path[0]}/quartet_teloexplorer.py'] + parameter)
     elif module == '-h' or module == '--help':
         print(usage)
+
+
+if __name__ == '__main__':
+    main()
