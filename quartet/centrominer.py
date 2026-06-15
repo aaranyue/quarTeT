@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.2.5r2
+# Last modified: V1.3.0
 
 import subprocess
 import os
@@ -7,9 +7,9 @@ import sys
 from multiprocessing.dummy import Pool
 import argparse
 import itertools
-import quartet_util
+from . import util
 
-def centroMiner(args):
+def CentroMiner(args):
     genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, noplot, match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength, max_TR_length = args
     
     # split genome into chr
@@ -21,7 +21,7 @@ def centroMiner(args):
     subprocess.run(f'mkdir TandemRepeat', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     subprocess.run(f'mkdir Candidates', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
-    genomedict = quartet_util.readFastaAsDict(genomefile)
+    genomedict = util.readFastaAsDict(genomefile)
     chrlendict = {}
     print('[Info] Spliting genome to chromosome...')
     for Chr in genomedict:
@@ -37,7 +37,7 @@ def centroMiner(args):
         datfile = f'tmp/trfdat/{prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat'
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
         if not os.path.exists(datfile) or overwrite == True:
-            quartet_util.runsub(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', 'trf', 1, False)
+            util.runsub(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', 'trf', 1, False)
         subprocess.run(f'mv -t tmp/trfdat -f {prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         with open(datfile, 'r') as trfResult:
             linelist = []
@@ -58,11 +58,11 @@ def centroMiner(args):
 
         # blast chr with patterns
         clusterfastafile = f'TandemRepeat/{prefix}.{Chr}.tr.cluster.fasta'
-        quartet_util.runsub(f'cd-hit-est -i {trfastafile} -o {clusterfastafile} -c {identity} -n {wordlength} -S {periodmaxdelta} -M 0', 'cd-hit-est')
+        util.runsub(f'cd-hit-est -i {trfastafile} -o {clusterfastafile} -c {identity} -n {wordlength} -S {periodmaxdelta} -M 0', 'cd-hit-est')
         blastdb = f'tmp/splitchr/{prefix}.{Chr}'
-        quartet_util.runsub(f'makeblastdb -dbtype nucl -in {splitchrfastafile} -out {blastdb}', 'makeblastdb')
+        util.runsub(f'makeblastdb -dbtype nucl -in {splitchrfastafile} -out {blastdb}', 'makeblastdb')
         blastresultfile = f'tmp/blast/{prefix}.{Chr}.tr.blast'
-        quartet_util.runsub(f'blastn -db {blastdb} -query {clusterfastafile} -out {blastresultfile} -outfmt 7 -evalue {e}', 'blastn')
+        util.runsub(f'blastn -db {blastdb} -query {clusterfastafile} -out {blastresultfile} -outfmt 7 -evalue {e}', 'blastn')
 
         # build TR annotation
         blastgff3file = f'TandemRepeat/{prefix}.{Chr}.tr.blast.gff3'
@@ -152,7 +152,7 @@ def centroMiner(args):
             continuousregion.append([prevstart, prevend, TRlength, subTRlength])
 
         # sort and write candidates
-        TRdict = quartet_util.readFastaAsDict(trfastafile)
+        TRdict = util.readFastaAsDict(trfastafile)
         continuousregion.sort(key=lambda x:x[2]/(x[1]-x[0]), reverse=True)
         candidatefile = f'Candidates/{prefix}.{Chr}.candidate'
         with open(candidatefile, 'w') as out:
@@ -175,13 +175,13 @@ def centroMiner(args):
                 for i in range(0, chrlendict[Chr], 50000):
                     l = i - 50000
                     r = i + 50000
-                    v1 = quartet_util.calculate_cover_length(trintervals, l, r)
+                    v1 = util.calculate_cover_length(trintervals, l, r)
                     tsv.write(f'{i}\t{v1}\tTR\n')
                     if tegfffile != None:
-                        v2 = quartet_util.calculate_cover_length(teintervals, l, r)
+                        v2 = util.calculate_cover_length(teintervals, l, r)
                         tsv.write(f'{i}\t{v2}\tTE\n')
                     if genegfffile != None:
-                        v3 = quartet_util.calculate_cover_length(geintervals, l, r)
+                        v3 = util.calculate_cover_length(geintervals, l, r)
                         tsv.write(f'{i}\t{v3}\tgene\n')
             rscript = f'library(ggplot2);options(scipen=999);data<-read.table("{tsvfile}");colnames(data)<-c("site","value","type");data$site<-as.numeric(data$site);data$value<-as.numeric(data$value);pdf("{pdffile}");ggplot(data,aes(x=site,y=value,group=type,color=type,shape=type))+geom_line()+labs(x="Position",y="Length (bp)")+theme(axis.text.x=element_text(angle=90,hjust=0.5))+scale_x_continuous(breaks=seq(0,max(data$site),1000000),minor_breaks=seq(0,max(data$site),500000))+facet_wrap(~type,scales="free_y",dir="v")'
             subprocess.run(f"echo '{rscript}' | Rscript -", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -211,9 +211,14 @@ def centroMiner(args):
     print(f'[Output] Centromere candidates data write to folder: Candidates')
 
 ### RUN ###
-if __name__ == '__main__':
+def main(inarg=None):
     # Argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='CentroMiner: centromere prediction tool',
+        prog='quartet CentroMiner',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
     parser.add_argument('-i', dest='genome_fasta',required=True, help='(*Required) Genome file, FASTA format.')
     parser.add_argument('--TE', dest='TE', default=None, help='TE annotation file, gff3 format.')
     parser.add_argument('--gene', dest='gene', default=None, help='gene annotation file, gff3 format.')
@@ -231,36 +236,38 @@ if __name__ == '__main__':
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing trf dat file instead of reuse.')
     parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
 
+    args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
+
     # parse input paramater
-    genomefile = quartet_util.decompress(parser.parse_args().genome_fasta)
+    genomefile = util.decompress(args.genome_fasta)
 
-    tegfffile = quartet_util.decompress(parser.parse_args().TE)
-    genegfffile = quartet_util.decompress(parser.parse_args().gene)
+    tegfffile = util.decompress(args.TE)
+    genegfffile = util.decompress(args.gene)
 
-    minperiod = int(parser.parse_args().min_period)
-    maxperiod = int(parser.parse_args().max_period)
-    e = float(parser.parse_args().evalue)
-    maxgap = int(parser.parse_args().max_gap)
-    minlength = int(parser.parse_args().min_length)
-    max_TR_length = int(parser.parse_args().max_TR_length)
+    minperiod = int(args.min_period)
+    maxperiod = int(args.max_period)
+    e = float(args.evalue)
+    maxgap = int(args.max_gap)
+    minlength = int(args.min_length)
+    max_TR_length = int(args.max_TR_length)
     
-    prefix = parser.parse_args().prefix
-    threads = parser.parse_args().threads
-    overwrite = parser.parse_args().overwrite
-    noplot = parser.parse_args().noplot
+    prefix = args.prefix
+    threads = args.threads
+    overwrite = args.overwrite
+    noplot = args.noplot
 
-    if len(parser.parse_args().trf_parameter) != 6:
+    if len(args.trf_parameter) != 6:
         print('[Error] TRF parameter should be <match> <mismatch> <delta> <PM> <PI> <minscore>.')
         sys.exit(0)
-    match = int(parser.parse_args().trf_parameter[0])
-    mismatch = int(parser.parse_args().trf_parameter[1])
-    delta = int(parser.parse_args().trf_parameter[2])
-    PctMatch = int(parser.parse_args().trf_parameter[3])
-    PctIndel = int(parser.parse_args().trf_parameter[4])
-    minscore = int(parser.parse_args().trf_parameter[5])
+    match = int(args.trf_parameter[0])
+    mismatch = int(args.trf_parameter[1])
+    delta = int(args.trf_parameter[2])
+    PctMatch = int(args.trf_parameter[3])
+    PctIndel = int(args.trf_parameter[4])
+    minscore = int(args.trf_parameter[5])
 
-    identity = float(parser.parse_args().cluster_identity)
-    periodmaxdelta = int(parser.parse_args().cluster_max_delta)
+    identity = float(args.cluster_identity)
+    periodmaxdelta = int(args.cluster_max_delta)
     if identity < 0.8 or identity > 1:
         print('[Error] Cluster identity should be set in 0.8 ~ 1.')
         sys.exit(0)
@@ -274,10 +281,10 @@ if __name__ == '__main__':
         wordlength = 10
 
     # check prerequisites
-    quartet_util.check_prerequisite(['trf', 'cd-hit-est', 'makeblastdb', 'blastn'])
+    util.check_prerequisite(['trf', 'cd-hit-est', 'makeblastdb', 'blastn'])
 
     # run
     args = [genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, noplot,
             match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength, max_TR_length]
     print(f'[Info] Paramater: genomefile={genomefile}, tegfffile={tegfffile}, genegfffile={genegfffile}, minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, prefix={prefix}, threads={threads}, overwrite={overwrite}, noplot={noplot}, match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, minscore={minscore}, identity={identity}, periodmaxdelta={periodmaxdelta}, wordlength={wordlength}, max_TR_length={max_TR_length}')
-    quartet_util.run(centroMiner, args)
+    util.run(CentroMiner, args)

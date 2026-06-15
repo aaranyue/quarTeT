@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# Last modified: V1.2.5r3
+# Last modified: V1.3.0
 
 import argparse
 import subprocess
 import re
 import os
 import sys
-import quartet_util
+from . import util, teloexplorer
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
@@ -15,7 +15,7 @@ def AssemblyMapper(args):
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    inputdict = quartet_util.readFastaAsDict(qryfile)
+    inputdict = util.readFastaAsDict(qryfile)
     totaldict = inputdict.copy()
     contigsdict = {}
     if nofilter != True:
@@ -38,15 +38,16 @@ def AssemblyMapper(args):
         contigsdict = inputdict
 
     # check telomere in contigs
+    # TODO: add skip telo option; don't use main entry to skip complete info
     print('[Info] Checking telomere in contigs...')
     telofile = f'tmp/{prefix}.tig.telo.info'
     if not os.path.exists(telofile) or overwrite == True:
-        subprocess.run(f'python3 {sys.path[0]}/quartet_teloexplorer.py -i {contigfile} -p {prefix}.tig --noplot -c {teclade} -m {teminrepeattimes}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        teloexplorer.main(['-i', f'{contigfile}', '-p', f'{prefix}.tig', '--noplot', '-c', f'{teclade}', '-m', f'{teminrepeattimes}'])
         subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     monopolize = []
     forceleft = []
     forceright = []
-    refdict = quartet_util.readFastaAsDict(refgenomefile)
+    refdict = util.readFastaAsDict(refgenomefile)
     minchrlen = min([len(y) for x, y in refdict.items()])
     if os.path.exists(telofile):
         with open(telofile, 'r') as telo:
@@ -80,7 +81,7 @@ def AssemblyMapper(args):
     allAlignment = {}
     doplot = not noplot
     if aligner == 'mummer':
-        coordsfile = quartet_util.mummer(refgenomefile, contigfile, prefix, 'contig_map_ref', nucmeroption, deltafilteroption, doplot, overwrite)
+        coordsfile = util.mummer(refgenomefile, contigfile, prefix, 'contig_map_ref', nucmeroption, deltafilteroption, doplot, overwrite)
         
         with open(coordsfile, 'r') as f:
             for line in f:
@@ -101,7 +102,7 @@ def AssemblyMapper(args):
                 allAlignment[f'{refid}#{qryid}'] = alignment
 
     elif aligner == 'minimap2' or aligner == 'unimap':
-        paffile = quartet_util.minimap(refgenomefile, contigfile, prefix, 'contig_map_ref', minimapoption, doplot, overwrite, aligner)
+        paffile = util.minimap(refgenomefile, contigfile, prefix, 'contig_map_ref', minimapoption, doplot, overwrite, aligner)
 
         with open(paffile, 'r') as f:
             for line in f:
@@ -165,8 +166,8 @@ def AssemblyMapper(args):
     # write all contigs' destination
     contiginfo = []
     mappedbases, discardedbases = 0, 0
-    totaldict = quartet_util.readFastaAsDict(f'tmp/{prefix}.totaldict.fasta')
-    contigsdict = quartet_util.readFastaAsDict(f'tmp/{prefix}.contigsdict.fasta')
+    totaldict = util.readFastaAsDict(f'tmp/{prefix}.totaldict.fasta')
+    contigsdict = util.readFastaAsDict(f'tmp/{prefix}.contigsdict.fasta')
     for tigid, seq in totaldict.items():
         tiglen = len(seq)
         if tigid in map:
@@ -204,7 +205,7 @@ def AssemblyMapper(args):
 
     # chimera option
     if chimera != 0:
-        refdict = quartet_util.readFastaAsDict(refgenomefile)
+        refdict = util.readFastaAsDict(refgenomefile)
         with open(f'{prefix}.chimera_contig.fasta', 'w') as nw:
             for tigid in map:
                 refid = map[tigid]['refid']
@@ -217,7 +218,7 @@ def AssemblyMapper(args):
                 if strand == '+':
                     seqout = refdict[refid][left-1:refstart] + tigseq + refdict[refid][refend:right+1]
                 else:
-                    seqout = quartet_util.reversedseq(refdict[refid][refend:right+1]) + tigseq + quartet_util.reversedseq(refdict[refid][left-1:refstart])
+                    seqout = util.reversedseq(refdict[refid][refend:right+1]) + tigseq + util.reversedseq(refdict[refid][left-1:refstart])
                 nw.write(f'>{tigid}_chimera_{refid}_{left}~{refstart}+this+{refend}~{right}\n{seqout}\n')
         print(f'[Output] Chimeric contigs write to: {prefix}.chimera_contig.fasta')
 
@@ -238,7 +239,7 @@ def AssemblyMapper(args):
     counts = {}
     qryorder = sorted(map.keys(), key=lambda x: map[x]['position'],)
     for qryid in qryorder:
-        seq = contigsdict[qryid] if map[qryid]['strand'] == '+' else quartet_util.reversedseq(contigsdict[qryid])
+        seq = contigsdict[qryid] if map[qryid]['strand'] == '+' else util.reversedseq(contigsdict[qryid])
         newid = f"{map[qryid]['refid']}"
         if newid not in chrfastadict:
             chrfastadict[newid] = seq
@@ -299,20 +300,25 @@ def AssemblyMapper(args):
     print(f'[Output] draft genome stat write to: {draftgenomestatfile}')
     
     if doplot == True:
-        quartet_util.drawgenome(draftgenomeagpfile, f'{prefix}.draftgenome')
+        util.drawgenome(draftgenomeagpfile, f'{prefix}.draftgenome')
 
     # show colinearity in plot
     if plot == True:
         print('[Info] Aligning draft and ref to plot...')
         if aligner == 'mummer':
-            quartet_util.mummer(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_mummer_ref', nucmeroption, deltafilteroption, plot, overwrite)
+            util.mummer(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_mummer_ref', nucmeroption, deltafilteroption, plot, overwrite)
         if aligner == 'minimap2' or aligner == 'unimap':
-            quartet_util.minimap(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_map_ref', minimapoption, plot, overwrite, aligner)
+            util.minimap(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_map_ref', minimapoption, plot, overwrite, aligner)
 
 ### RUN ###
-if __name__ == '__main__':
+def main(inarg=None):
     # Argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='AssemblyMapper: reference-guided assemble tool',
+        prog='quartet AssemblyMapper',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
     parser.add_argument('-r', dest='reference_genome',required=True, help='(*Required) Reference genome file, FASTA format.')
     parser.add_argument('-q', dest='contigs', required=True, help='(*Required) Phased contigs file, FASTA format.')
     parser.add_argument('-c', dest='min_contig_length', type=int, default=50000, help='Contigs shorter than INT (bp) will be removed, default: 50000')
@@ -334,41 +340,43 @@ if __name__ == '__main__':
     parser.add_argument('--teclade', dest='te_clade', choices=['plant', 'animal', 'other'], default='other', help='Specify clade of this genome for telomere search. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore\'s suggestion, default: other')
     parser.add_argument('--teminrepeattimes', dest='te_min_repeat_times', type=int, default=100, help='The min repeat times to considered as telomere, default: 100')
 
+    args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
+    
     # parse input paramater
-    refgenomefile = quartet_util.decompress(parser.parse_args().reference_genome)
-    qryfile = quartet_util.decompress(parser.parse_args().contigs)
-    mincontiglength = int(parser.parse_args().min_contig_length)
-    minalignmentlength = int(parser.parse_args().min_alignment_length)
-    minalignmentidentity = float(parser.parse_args().min_alignment_identity) / 100
+    refgenomefile = util.decompress(args.reference_genome)
+    qryfile = util.decompress(args.contigs)
+    mincontiglength = int(args.min_contig_length)
+    minalignmentlength = int(args.min_alignment_length)
+    minalignmentidentity = float(args.min_alignment_identity) / 100
     if minalignmentidentity < 0 or minalignmentidentity > 1:
         print('[Error] min_alignment_identity should be within 0~100.')
         sys.exit(0)
-    prefix = parser.parse_args().prefix
-    threads = parser.parse_args().threads
-    aligner = parser.parse_args().aligner
-    nofilter = parser.parse_args().nofilter
-    keep = parser.parse_args().keep
-    groupcontig = parser.parse_args().groupcontig
-    chimera = parser.parse_args().chimera
-    plot = parser.parse_args().plot
-    noplot = parser.parse_args().noplot
-    overwrite = parser.parse_args().overwrite
-    teclade = parser.parse_args().te_clade
-    teminrepeattimes = parser.parse_args().te_min_repeat_times
-    quartet_util.check_prerequisite(['delta-filter', 'show-coords'])
+    prefix = args.prefix
+    threads = args.threads
+    aligner = args.aligner
+    nofilter = args.nofilter
+    keep = args.keep
+    groupcontig = args.groupcontig
+    chimera = args.chimera
+    plot = args.plot
+    noplot = args.noplot
+    overwrite = args.overwrite
+    teclade = args.te_clade
+    teminrepeattimes = args.te_min_repeat_times
+    util.check_prerequisite(['delta-filter', 'show-coords'])
     if aligner == 'mummer':
-        quartet_util.check_prerequisite(['nucmer'])
-        nucmeroption = parser.parse_args().nucmeroption + f' -t {threads}'
-        deltafilteroption = parser.parse_args().deltafilteroption + f' -l {minalignmentlength} -i {minalignmentidentity}'
+        util.check_prerequisite(['nucmer'])
+        nucmeroption = args.nucmeroption + f' -t {threads}'
+        deltafilteroption = args.deltafilteroption + f' -l {minalignmentlength} -i {minalignmentidentity}'
         minimapoption = ''
     if aligner == 'minimap2' or aligner == 'unimap':
-        quartet_util.check_prerequisite([aligner])
+        util.check_prerequisite([aligner])
         nucmeroption = ''
         deltafilteroption = ''
-        minimapoption = parser.parse_args().minimapoption + f' -t {threads}'
+        minimapoption = args.minimapoption + f' -t {threads}'
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
             prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, groupcontig={groupcontig}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}')  
-    quartet_util.run(AssemblyMapper, args)
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, groupcontig={groupcontig}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}')
+    util.run(AssemblyMapper, args)
