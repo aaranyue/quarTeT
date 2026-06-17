@@ -9,9 +9,11 @@ Task include:
 
 ## Version Change log
 1.3.0
-- Breaking: new entry point `quartet` instead of `python3 {path}/quartet.py` to support conda/pip install
-- Add `--notelo` option for AssemblyMapper
-- Improve logging system
+- Breaking: new entry point `quartet` instead of `python3 {path}/quartet.py` to support conda/pip install.
+- Add `--notelo` option for AssemblyMapper.
+- Change behavior with gzip file: create new file instead of replace
+- Improve logging system.
+
 
 1.2.5
 - Add new '--groupcontig' option for AssemblyMapper. Adding this option will output a folder containing contigs grouped by reference sequence (will group unassigned contigs into one).

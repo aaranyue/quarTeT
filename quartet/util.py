@@ -24,7 +24,9 @@ def decompress(file):
     if 'gzip compressed data' in subprocess.run(f'file {file}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode():
         newfile = '.'.join(file.split('.')[:-1])
         subprocess.run(f'gzip -dc {file} > {newfile}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    return newfile
+        return newfile
+    else:
+        return file
 
 def readFastaAsDict(fastafile):
     fastaDict = {}

@@ -3,7 +3,6 @@
 
 import sys
 from logging.config import dictConfig
-from quartet import assemblymapper, gapfiller, centrominer, teloexplorer
 
 USAGE = '''quarTeT: Telomere-to-telomere Toolkit
 version 1.3.0
@@ -30,6 +29,8 @@ LOGGING_CONFIG = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'default',
+            'level': 'INFO',
+            'stream': sys.stderr,
         },
     },
     'root': {
@@ -48,6 +49,7 @@ def main():
     module = sys.argv[1]
     parameters = sys.argv[2:] if len(sys.argv) > 2 else []
     
+    from quartet import assemblymapper, gapfiller, centrominer, teloexplorer
     valid_modules = {
         'AssemblyMapper': assemblymapper.main,
         'am': assemblymapper.main,
