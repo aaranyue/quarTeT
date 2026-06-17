@@ -1,45 +1,30 @@
 # Last modified: V1.3.0
-import time
 import sys
-import math
 import subprocess
 import os
 import re
+import logging
 from collections import defaultdict
 
-def run(func, args):
-    starttime = time.time()
-    func(args)
-    endtime = time.time()
-    print('[Info] Complete!')
-    timecost = endtime - starttime
-    timecostd = math.floor(timecost / (60*60*24))
-    timecosth = math.floor(timecost % (60*60*24) / (60*60))
-    timecostm = math.floor(timecost % (60*60*24) % (60*60) / 60)
-    timecosts = math.floor(timecost % (60*60*24) % (60*60) % 60)
-    print(f'[Info] Time Cost: {timecostd}d, {timecosth}h, {timecostm}m, {timecosts}s')
+logger = logging.getLogger(__name__)
     
 def check_prerequisite(prerequisitelist: list):
-    # print('Checking prerequisites...')
     prerequisitenotfound = []
     for prerequisite in prerequisitelist:
         cmd = subprocess.run(f'which {prerequisite}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         if cmd.stdout == b'':
             prerequisitenotfound.append(prerequisite)
-        # else:
-        #     print(f'{prerequisite} located at: {cmd.stdout.decode("utf-8").strip()}')
     if prerequisitenotfound != []:
         for prerequisite in prerequisitenotfound:
-            print(f'[Error] prerequisite not found: {prerequisite}')
-        print(f'[Error] Please make sure these software have been installed, exported to $PATH, and authorized executable.')
-        sys.exit(0)
-    # print('All prerequisites found.')
+            logger.error(f'Prerequisite not found: {prerequisite}')
+        logger.error(f'Please make sure these software have been installed, exported to $PATH, and authorized executable.')
+        sys.exit(1)
 
 def decompress(file):
     if 'gzip compressed data' in subprocess.run(f'file {file}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode():
-        subprocess.run(f'gzip -d {file}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        file = '.'.join(file.split('.')[:-1])
-    return file
+        newfile = '.'.join(file.split('.')[:-1])
+        subprocess.run(f'gzip -dc {file} > {newfile}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    return newfile
 
 def readFastaAsDict(fastafile):
     fastaDict = {}
@@ -89,14 +74,14 @@ def changeSuffix(filename, newsuffix):
     return '.'.join(namelist)
 
 def mummer(reffasta, qryfasta, prefix, suffix, nucmeroption, deltafilteroption, plot, overwrite):
-    print('[Info] Running MUMmer...')
+    logger.info('Running MUMmer...')
     subprocess.run(f'mv -t ./ -f tmp/{prefix}.{suffix}.delta', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if not os.path.exists(f'{prefix}.{suffix}.delta') or overwrite == True:
         runsub(f'nucmer {nucmeroption} -p {prefix}.{suffix} {reffasta} {qryfasta}', 'nucmer')
     runsub(f'delta-filter {deltafilteroption} -m -q {prefix}.{suffix}.delta > {prefix}.{suffix}.filter.delta', 'delta-filter')
     runsub(f'show-coords -T -H {prefix}.{suffix}.filter.delta > {prefix}.{suffix}.coords', 'show-coords')
     if os.path.getsize(f'{prefix}.{suffix}.coords') == 0:
-        print(f'[Error] No alignment found or all alignments are filtered. Recommended to adjust filter arguments.')
+        logger.error(f'No alignment found or all alignments are filtered. Recommended to adjust filter arguments.')
         sys.exit(0)
     if plot == True:
         runsub(f'mummerplot -t png -p {prefix}.{suffix} {prefix}.{suffix}.filter.delta', 'mummerplot')
@@ -108,30 +93,30 @@ def mummer(reffasta, qryfasta, prefix, suffix, nucmeroption, deltafilteroption, 
         with open(f'{prefix}.{suffix}.gp', 'w') as gp:
             gp.write(newgp)
         runsub(f'gnuplot {prefix}.{suffix}.gp', 'gnuplot')
-        print(f'[Output] Colinearity graph write to: {prefix}.{suffix}.png')
+        logger.info(f'[Output] Colinearity graph write to: {prefix}.{suffix}.png')
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    subprocess.run(f'mv -t tmp -f {prefix}.{suffix}.gp {prefix}.{suffix}.fplot {prefix}.{suffix}.rplot {prefix}.{suffix}.delta {prefix}.{suffix}.filter.delta {prefix}.{suffix}.coords', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    subprocess.run(f'mv -t tmp -f {prefix}.{suffix}.gp {prefix}.{suffix}.fplot {prefix}.{suffix}.rplot '+
+                   f'{prefix}.{suffix}.delta {prefix}.{suffix}.filter.delta {prefix}.{suffix}.coords', 
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     return f'tmp/{prefix}.{suffix}.coords'
 
 def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite, aligner):
-    print(f'[Info] Running {aligner}...')
+    logger.info(f'Running {aligner}...')
     subprocess.run(f'mv -t ./ -f tmp/{prefix}.{suffix}.paf', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if not os.path.exists(f'{prefix}.{suffix}.paf') or overwrite == True:
         cmdr = subprocess.run(f'{aligner} {minimapoption} -c -o {prefix}.{suffix}.paf {reffasta} {qryfasta}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         if '[morecore]' in cmdr.stderr.decode("utf-8") or cmdr.returncode < 0:
-            print(f'[Error] Memory insufficient.')
+            logger.error(f'Memory insufficient.')
             sys.exit(0)
         elif cmdr.returncode != 0:
-            print(f'[Error] Unexcepted error occur in {aligner} as follow:')
-            print(f'cmd: {cmdr.args}')
-            print(f'returncode: {cmdr.returncode}')
-            print('stdout:')
-            print(cmdr.stdout.decode("utf-8"))
-            print('stderr:')
-            print(cmdr.stderr.decode("utf-8"))
+            logger.error(f'Unexcepted error occur in {aligner} as follow:\n'+
+                f'cmd: {cmdr.args}\n'+
+                f'returncode: {cmdr.returncode}\n'+
+                f'stdout:\n{cmdr.stdout.decode("utf-8")}\n'+
+                f'stderr:\n{cmdr.stderr.decode("utf-8")}')
             sys.exit(1)
     if os.path.getsize(f'{prefix}.{suffix}.paf') == 0:
-        print(f'[Error] No alignment found.')
+        logger.error(f'No alignment found.')
         sys.exit(0)
     if plot == True:
         # convert paf to delta
@@ -197,9 +182,11 @@ def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite, 
         with open(f'{prefix}.{suffix}.gp', 'w') as gp:
             gp.write(newgp)
         runsub(f'gnuplot {prefix}.{suffix}.gp', 'gnuplot')
-        print(f'[Output] Colinearity graph write to: {prefix}.{suffix}.png')
+        logger.info(f'[Output] Colinearity graph write to: {prefix}.{suffix}.png')
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    subprocess.run(f'mv -t tmp -f {prefix}.{suffix}.gp {prefix}.{suffix}.fplot {prefix}.{suffix}.rplot {prefix}.{suffix}.delta {prefix}.{suffix}.filter.delta {prefix}.{suffix}.paf {prefix}.{suffix}.coords', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    subprocess.run(f'mv -t tmp -f {prefix}.{suffix}.gp {prefix}.{suffix}.fplot {prefix}.{suffix}.rplot '+
+                   f'{prefix}.{suffix}.delta {prefix}.{suffix}.filter.delta {prefix}.{suffix}.paf {prefix}.{suffix}.coords', 
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     return f'tmp/{prefix}.{suffix}.paf'
 
 def agpGap(infile, outagp):
@@ -291,27 +278,25 @@ convertSVG("{outprefix}.svg", file = "{outprefix}", device = "png")'''
             r.write(RscriptNolabel)
     cmdr = subprocess.run(f'Rscript tmp/{outprefix}.genomedrawer.r', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if cmdr.returncode != 0:
-        print(f'[Warning] Unexcepted error occur in Rscript figure drawing as follow:')
-        print(f'cmd: {cmdr.args}')
-        print(f'returncode: {cmdr.returncode}')
-        print('stdout:')
-        print(cmdr.stdout.decode("utf-8"))
-        print('stderr:')
-        print(cmdr.stderr.decode("utf-8"))
+        logger.warning(f'Unexcepted error occur in Rscript figure drawing as follow:'+
+        f'cmd: {cmdr.args}'+
+        f'returncode: {cmdr.returncode}'+
+        f'stdout:\n{cmdr.stdout.decode("utf-8")}\n'+
+        f'stderr:\n{cmdr.stderr.decode("utf-8")}')
     else:
-        print(f'[Output] Chromosome plot write to: {outprefix}.png')
+        logger.info(f'[Output] Chromosome plot write to: {outprefix}.png')
     
 def runsub(cmd, name, successcode=0, exitonerror=True):
     cmdr = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if cmdr.returncode != successcode:
         error_msg = (
-            f'[Error] Unexpected error occurred in {name}:\n'
+            f'Unexpected error occurred in {name}:\n'
             f'cmd: {cmdr.args}\n'
             f'returncode: {cmdr.returncode}\n'
             f'stdout:\n{cmdr.stdout.decode("utf-8")}\n'
             f'stderr:\n{cmdr.stderr.decode("utf-8")}'
         )
-        print(error_msg)
+        logger.error(error_msg)
         if exitonerror:
             raise subprocess.CalledProcessError(
                 returncode=cmdr.returncode,

@@ -6,16 +6,18 @@ import subprocess
 import re
 import os
 import sys
+import logging
 from . import util, teloexplorer
+
+logger = logging.getLogger(__name__)
                      
 ### MAIN PROGRAM ###
-def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, \
-    threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, \
-    overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo = args
+def AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, 
+    threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, 
+    overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo):
     
     # split scaffolds to contigs and remove short contigs
-    print('[Info] Filtering contigs input...')
+    logger.info('Filtering contigs input...')
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     inputdict = util.readFastaAsDict(qryfile)
     totaldict = inputdict.copy()
@@ -41,10 +43,10 @@ def AssemblyMapper(args):
 
     # check telomere in contigs
     if notelo == False:
-        print('[Info] Checking telomere in contigs...')
+        logger.info('Checking telomere in contigs...')
         telofile = f'tmp/{prefix}.tig.telo.info'
         if not os.path.exists(telofile) or overwrite == True:
-            teloexplorer.TeloExplorer([f'{contigfile}', f'{teclade}', int(teminrepeattimes), f'{prefix}.tig', True])
+            teloexplorer.TeloExplorer(f'{contigfile}', f'{teclade}', int(teminrepeattimes), f'{prefix}.tig', True)
             subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         monopolize = []
         forceleft = []
@@ -64,7 +66,7 @@ def AssemblyMapper(args):
                     elif status == 'right':
                         forceright.append(tigid)
         else:
-            print('[Warning] Cannot identify telomeres in contigs.')
+            logger.warning('Cannot identify telomeres in contigs.')
 
     # reduce memory   
     with open(f'tmp/{prefix}.totaldict.fasta', 'w') as tmptotaldict:
@@ -130,11 +132,11 @@ def AssemblyMapper(args):
                     alignment['refend'] = int(refend)
                 allAlignment[f'{refid}#{qryid}'] = alignment
     if allAlignment == {}:
-        print(f'[Error] All alignments are filtered. Recommended to adjust filter arguments.')
+        logger.error(f'All alignments are filtered. Recommended to adjust filter arguments.')
         sys.exit(0)
 
     # analysis each alignment and create map
-    print('[Info] Analysising aligments...')
+    logger.info('Analysising aligments...')
     map = {}
     for key, alignment in allAlignment.items():
         # decide monopolizer contig first
@@ -193,7 +195,7 @@ def AssemblyMapper(args):
         w.write(f'# ContigID\tContigLength\tTargetID\n')
         for [tigid, tiglen, target] in contiginfo:
             w.write(f'{tigid}\t{tiglen}\t{target}\n')
-    print(f'[Output] Mapping result for each contigs write to: {contigmapinfofile}')
+    logger.info(f'[Output] Mapping result for each contigs write to: {contigmapinfofile}')
 
     # group contig option
     if groupcontig == True:
@@ -203,7 +205,7 @@ def AssemblyMapper(args):
             file_path = f"{prefix}.groupcontig/{target}.tig.fasta"
             with open(file_path, 'a') as file:
                 file.write(f">{tigid}\n{totaldict[tigid]}\n")
-        print(f'[Output] grouped contigs write to: {prefix}.groupcontig/')
+        logger.info(f'[Output] grouped contigs write to: {prefix}.groupcontig/')
 
     # chimera option
     if chimera != 0:
@@ -222,7 +224,7 @@ def AssemblyMapper(args):
                 else:
                     seqout = util.reversedseq(refdict[refid][refend:right+1]) + tigseq + util.reversedseq(refdict[refid][left-1:refstart])
                 nw.write(f'>{tigid}_chimera_{refid}_{left}~{refstart}+this+{refend}~{right}\n{seqout}\n')
-        print(f'[Output] Chimeric contigs write to: {prefix}.chimera_contig.fasta')
+        logger.info(f'[Output] Chimeric contigs write to: {prefix}.chimera_contig.fasta')
 
     # check if all Chr have contigs mapped.
     mappedchrlist = []
@@ -231,10 +233,10 @@ def AssemblyMapper(args):
             mappedchrlist.append(mapinfo['refid'])
     for id in refdictkey:
         if id not in mappedchrlist:
-            print(f'[Warning] {id} failed to be mapped by any contigs.') 
+            logger.warning(f'{id} failed to be mapped by any contigs.') 
 
     # write draft genome fasta and agp and stat
-    print('[Info] Generating draft genome and statistics...')
+    logger.info('Generating draft genome and statistics...')
     chrfastadict = {}
     agplist = []
     gaplocus = {}
@@ -266,9 +268,9 @@ def AssemblyMapper(args):
                 if target == 'TooShort' or target == 'NoAlignment':
                     fa.write(f'>{tigid}\n{totaldict[tigid]}\n')
     if os.path.getsize(draftgenomefastafile) == 0:
-        print('[Error] No Chromosome can be assembly.')
+        logger.error('No Chromosome can be assembly.')
         sys.exit(0)
-    print(f'[Output] draft genome fasta file write to: {draftgenomefastafile}')
+    logger.info(f'[Output] draft genome fasta file write to: {draftgenomefastafile}')
     
     draftgenomeagpfile = f'{prefix}.draftgenome.agp'
     with open(draftgenomeagpfile, 'w') as agp:
@@ -279,7 +281,7 @@ def AssemblyMapper(args):
             for [tigid, tiglen, target] in contiginfo:
                 if target == 'TooShort' or target == 'NoAlignment':
                     agp.write(f"{tigid}\t1\t{tiglen}\t1\tW\t{tigid}\t1\t{tiglen}\t+\n")
-    print(f'[Output] draft genome agp file write to: {draftgenomeagpfile}')
+    logger.info(f'[Output] draft genome agp file write to: {draftgenomeagpfile}')
 
     draftgenomestatfile = f'{prefix}.draftgenome.stat'
     with open(draftgenomestatfile, 'w') as info:
@@ -299,14 +301,14 @@ def AssemblyMapper(args):
                 tmpl.append(f'{start}-{end}')
             locus = '\t'.join(tmpl)
             info.write(f'{chrs}\t{len(chrfastadict[chrs])}\t{gapcount}\t{locus}\n')
-    print(f'[Output] draft genome stat write to: {draftgenomestatfile}')
+    logger.info(f'[Output] draft genome stat write to: {draftgenomestatfile}')
     
     if doplot == True:
         util.drawgenome(draftgenomeagpfile, f'{prefix}.draftgenome')
 
     # show colinearity in plot
     if plot == True:
-        print('[Info] Aligning draft and ref to plot...')
+        logger.info('Aligning draft and ref to plot...')
         if aligner == 'mummer':
             util.mummer(refgenomefile, draftgenomefastafile, prefix, 'draftgenome_mummer_ref', nucmeroption, deltafilteroption, plot, overwrite)
         if aligner == 'minimap2' or aligner == 'unimap':
@@ -339,7 +341,8 @@ def main(inarg=None):
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2/unimap program, default: -x asm5')
     parser.add_argument('--nucmeroption', dest='nucmeroption', default='', help='Pass additional parameters to nucmer program.')
     parser.add_argument('--deltafilteroption', dest='deltafilteroption', default='', help='Pass additional parameters to delta-filter program.')
-    parser.add_argument('--teclade', dest='te_clade', choices=['plant', 'animal', 'other'], default='other', help='Specify clade of this genome for telomere search. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore\'s suggestion, default: other')
+    parser.add_argument('--teclade', dest='te_clade', choices=['plant', 'animal', 'other'], default='other', 
+                        help='Specify clade of this genome for telomere search. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore\'s suggestion, default: other')
     parser.add_argument('--teminrepeattimes', dest='te_min_repeat_times', type=int, default=100, help='The min repeat times to considered as telomere, default: 100')
     parser.add_argument('--notelo', dest='notelo', action='store_true', default=False, help='Skip telomere-assisted ordering and orientation.')
 
@@ -352,7 +355,7 @@ def main(inarg=None):
     minalignmentlength = int(args.min_alignment_length)
     minalignmentidentity = float(args.min_alignment_identity) / 100
     if minalignmentidentity < 0 or minalignmentidentity > 1:
-        print('[Error] min_alignment_identity should be within 0~100.')
+        logger.error('min_alignment_identity should be within 0~100.')
         sys.exit(0)
     prefix = args.prefix
     threads = args.threads
@@ -378,15 +381,16 @@ def main(inarg=None):
         nucmeroption = ''
         deltafilteroption = ''
         minimapoption = args.minimapoption + f' -t {threads}'
+    if notelo != True:
+        util.check_prerequisite(['tidk'])
     
     # run
-    args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, 
-            nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength},'+
+    logger.info(f'Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength},'+
           f' minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity},'+
           f' prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep},'+
           f' groupcontig={groupcontig}, chimera={chimera}, plot={plot}, noplot={noplot},'+
           f' overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption},'+
           f' minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}, notelo={notelo}')
-    util.run(AssemblyMapper, args)
+    AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
+            prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, 
+            nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo) 

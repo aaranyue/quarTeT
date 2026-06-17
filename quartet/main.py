@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Last modified: V1.3.0
-"""quarTeT main CLI entry point"""
 
 import sys
+from logging.config import dictConfig
 from quartet import assemblymapper, gapfiller, centrominer, teloexplorer
 
 USAGE = '''quarTeT: Telomere-to-telomere Toolkit
@@ -19,8 +19,28 @@ Modules:
 Use <module> -h for module usage.
 '''
 
+LOGGING_CONFIG = {
+    'version': 1,
+    'formatters': {
+        'default': {
+            'format': '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+        },
+    },
+    'root': {
+        'level': 'INFO',
+        'handlers': ['console'],
+    },
+}
+
+dictConfig(LOGGING_CONFIG)
+
 def main():
-    """Main entry point for quarTeT CLI"""
     if len(sys.argv) == 1:
         print(USAGE)
         sys.exit(0)
@@ -42,7 +62,8 @@ def main():
     }
     
     if module not in valid_modules:
-        print('Unexpected parameters. Use -h for help.')
+        print('Unexpected module name.')
+        print(USAGE)
         sys.exit(1)
     
     if module in ['-h', '--help']:

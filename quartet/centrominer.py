@@ -7,10 +7,14 @@ import sys
 from multiprocessing.dummy import Pool
 import argparse
 import itertools
+import logging
 from . import util
 
-def CentroMiner(args):
-    genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, noplot, match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength, max_TR_length = args
+logger = logging.getLogger(__name__)
+
+def CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, maxgap, 
+                minlength, prefix, threads, overwrite, noplot, match, mismatch, delta, PctMatch, PctIndel, 
+                minscore, identity, periodmaxdelta, wordlength, max_TR_length):
     
     # split genome into chr
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -23,7 +27,7 @@ def CentroMiner(args):
 
     genomedict = util.readFastaAsDict(genomefile)
     chrlendict = {}
-    print('[Info] Spliting genome to chromosome...')
+    logger.info('Spliting genome to chromosome...')
     for Chr in genomedict:
         chrlendict[Chr] = len(genomedict[Chr])
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
@@ -186,7 +190,7 @@ def CentroMiner(args):
             rscript = f'library(ggplot2);options(scipen=999);data<-read.table("{tsvfile}");colnames(data)<-c("site","value","type");data$site<-as.numeric(data$site);data$value<-as.numeric(data$value);pdf("{pdffile}");ggplot(data,aes(x=site,y=value,group=type,color=type,shape=type))+geom_line()+labs(x="Position",y="Length (bp)")+theme(axis.text.x=element_text(angle=90,hjust=0.5))+scale_x_continuous(breaks=seq(0,max(data$site),1000000),minor_breaks=seq(0,max(data$site),500000))+facet_wrap(~type,scales="free_y",dir="v")'
             subprocess.run(f"echo '{rscript}' | Rscript -", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
-        print(f'[Info] {Chr} done.')
+        logger.info(f'{Chr} done.')
         
     # multithread
     def print_error(e):
@@ -198,17 +202,17 @@ def CentroMiner(args):
                 f'stdout:\n{e.output.decode("utf-8")}\n'
                 f'stderr:\n{e.stderr.decode("utf-8")}'
             )
-            print(error_msg)
+            logger.error(error_msg)
 
-    print('[Info] Processing each chromosome...')
+    logger.info('Processing each chromosome...')
     p = Pool(min(len(genomedictkey), int(threads)))
     for Chr in genomedictkey:
         p.apply_async(centroblaster, (Chr,), error_callback=print_error)
     p.close()
     p.join()
     
-    print(f'[Output] Tandem repeats data write to folder: TandemRepeat')
-    print(f'[Output] Centromere candidates data write to folder: Candidates')
+    logger.info(f'[Output] Tandem repeats data write to folder: TandemRepeat')
+    logger.info(f'[Output] Centromere candidates data write to folder: Candidates')
 
 ### RUN ###
 def main(inarg=None):
@@ -257,7 +261,7 @@ def main(inarg=None):
     noplot = args.noplot
 
     if len(args.trf_parameter) != 6:
-        print('[Error] TRF parameter should be <match> <mismatch> <delta> <PM> <PI> <minscore>.')
+        logger.error('TRF parameter should be <match> <mismatch> <delta> <PM> <PI> <minscore>.')
         sys.exit(0)
     match = int(args.trf_parameter[0])
     mismatch = int(args.trf_parameter[1])
@@ -269,7 +273,7 @@ def main(inarg=None):
     identity = float(args.cluster_identity)
     periodmaxdelta = int(args.cluster_max_delta)
     if identity < 0.8 or identity > 1:
-        print('[Error] Cluster identity should be set in 0.8 ~ 1.')
+        logger.error('Cluster identity should be set in 0.8 ~ 1.')
         sys.exit(0)
     elif identity < 0.85:
         wordlength = 5
@@ -284,7 +288,12 @@ def main(inarg=None):
     util.check_prerequisite(['trf', 'cd-hit-est', 'makeblastdb', 'blastn'])
 
     # run
-    args = [genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, maxgap, minlength, prefix, threads, overwrite, noplot,
-            match, mismatch, delta, PctMatch, PctIndel, minscore, identity, periodmaxdelta, wordlength, max_TR_length]
-    print(f'[Info] Paramater: genomefile={genomefile}, tegfffile={tegfffile}, genegfffile={genegfffile}, minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, prefix={prefix}, threads={threads}, overwrite={overwrite}, noplot={noplot}, match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, minscore={minscore}, identity={identity}, periodmaxdelta={periodmaxdelta}, wordlength={wordlength}, max_TR_length={max_TR_length}')
-    util.run(CentroMiner, args)
+    logger.info(f'Paramater: genomefile={genomefile}, tegfffile={tegfffile}, genegfffile={genegfffile}, '+
+                f'minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, '+
+                f'prefix={prefix}, threads={threads}, overwrite={overwrite}, noplot={noplot}, '+
+                f'match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, '+
+                f'minscore={minscore}, identity={identity}, periodmaxdelta={periodmaxdelta}, '+
+                f'wordlength={wordlength}, max_TR_length={max_TR_length}')
+    CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, maxgap, minlength, 
+            prefix, threads, overwrite, noplot, match, mismatch, delta, PctMatch, PctIndel, minscore, identity, 
+            periodmaxdelta, wordlength, max_TR_length)

@@ -6,14 +6,17 @@ import argparse
 import subprocess
 import os
 import re
+import logging
 from . import util
 
+logger = logging.getLogger(__name__)
+
 ### MAIN PROGRAM ###
-def GapFiller(args):
-    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner = args
+def GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
+              maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner):
 
     # get gap's flanking seq
-    print('[Info] Getting gaps flanking sequence...')
+    logger.info('Getting gaps flanking sequence...')
     draftgenomedict = util.readFastaAsDict(draftgenomefile)
     flankingdict = {}
     gapdict = {}
@@ -27,15 +30,16 @@ def GapFiller(args):
                 leftseq = seq[start:gapsite[0]]
                 rightseq = seq[gapsite[1]:end]
                 if 'N'*100 in leftseq or 'N'*100 in rightseq:
-                    print(f'[Warning] Flanking sequence of gap {sid}.{i} contains another gap. This indicates two gaps are too close and a very small contig is placed in between.')
+                    logger.warning(f'Flanking sequence of gap {sid}.{i} contains another gap. '+
+                                   'This indicates two gaps are too close and a very small contig is placed in between.')
                 else:
                     flankingdict[f'{sid}.{i}.L'] = seq[start:gapsite[0]]
                     flankingdict[f'{sid}.{i}.R'] = seq[gapsite[1]:end]
                 gapdict[f'{sid}.{i}'] = seq[gapsite[0]:gapsite[1]]
                 i += 1
     if flankingdict == {}:
-        print('[Error] Input genome does not have valid gap.')
-        sys.exit(0)
+        logger.error('Input genome does not have valid gap.')
+        sys.exit(1)
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     flankingfastafile = f'tmp/{prefix}.gap.flanking.fasta'
     with open(flankingfastafile, 'w') as f:
@@ -47,7 +51,7 @@ def GapFiller(args):
     gapcloserdict = {}
     for gapfillfile in gapclosercontigfilelist:
         gapfiller = os.path.basename(gapfillfile)
-        print(f'[Info] gapfilling with {gapfiller}...')
+        logger.info(f'gapfilling with {gapfiller}...')
         gapfillfasta = util.readFastaAsDict(gapfillfile)
         
         # If gapfiller itself has gap, split it
@@ -63,7 +67,7 @@ def GapFiller(args):
             else:
                 gapfilldict[sid] = seq
         if needsplit:
-            print(f'[Info] Gaps found in {gapfiller}. Split it to contigs.')
+            logger.info(f'Gaps found in {gapfiller}. Split it to contigs.')
             gapfillfile = f'tmp/{gapfiller}.splitcontig.fasta'
             with open(gapfillfile, 'w') as c:
                 for tigid, seq in gapfilldict.items():
@@ -91,11 +95,11 @@ def GapFiller(args):
                                          'match': int(match), 'alignlen': int(alignlen), 'identity': int(match) / int(alignlen),
                                          'gapid': '.'.join(qryid.split('.')[:-1]), 'LR': qryid.split('.')[-1]})
         if allalignment == []:
-            print(f'[Info] No alignment for this file.')
+            logger.info(f'No alignment for this file.')
             continue
         
         # process each gap
-        print(f'[Info] Analysising Alignments...')
+        logger.info(f'Analysising Alignments...')
         gapfillfasta = util.readFastaAsDict(f'tmp/{prefix}.gapfillfasta.fasta')
         for gapid in gapdict:
             Leftanchor = [aln for aln in allalignment if aln['gapid'] == gapid and aln['LR'] == 'L']
@@ -129,13 +133,13 @@ def GapFiller(args):
                                                 'seq': '', 'strand': Laln['strand'], 
                                                 'score': (Laln['identity'] + Raln['identity']) / 2}
     
-    print(f'[Info] All files processed.')
+    logger.info(f'All files processed.')
     if gapcloserdict == {}:
-        print(f'[Error] No gap can be closed.')
-        sys.exit(0)
+        logger.error(f'No gap can be closed.')
+        sys.exit(1)
 
     # make detail
-    print(f'[Info] Generating filled fasta file and statistics...')
+    logger.info(f'Generating filled fasta file and statistics...')
     filldetailfile = f'{prefix}.genome.filled.detail'
     with open(filldetailfile, 'w') as de:
         totalfilledlen = sum([len(gapcloserdict[x]['seq']) for x in gapcloserdict])
@@ -147,7 +151,7 @@ def GapFiller(args):
                 de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tClosed\t{info["sid"]}\t{info["range"]}\t{len(info["seq"])}\t{info["strand"]}\t{info["score"]}\n')
             else:
                 de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tNot_closed\n')
-    print(f'[Output] Filling detail write to: {filldetailfile}')
+    logger.info(f'[Output] Filling detail write to: {filldetailfile}')
     
     # make fasta
     filledfastafile = f'{prefix}.genome.filled.fasta'
@@ -183,8 +187,8 @@ def GapFiller(args):
                     newseq += subseq
                 w.write(f'>{sid}\n{newseq}\n')
                 chrfastadict[f'{sid}'] = newseq
-    print(f'[Output] Filled genome fasta file write to: {filledfastafile}')
-    print(f'[Output] Modified chromosome agp file write to: {filledragpfile}')
+    logger.info(f'[Output] Filled genome fasta file write to: {filledfastafile}')
+    logger.info(f'[Output] Modified chromosome agp file write to: {filledragpfile}')
                 
     # make stat
     filledstatfile = f'{prefix}.genome.filled.stat'
@@ -212,7 +216,7 @@ def GapFiller(args):
                 info.write(f'{sid}\t{len(seq)}\t{count}\t{locus}\n')
             else:
                 info.write(f'{sid}\t{len(seq)}\t0\n')
-    print(f'[Output] Filled genome stat write to: {filledstatfile}')
+    logger.info(f'[Output] Filled genome stat write to: {filledstatfile}')
     
     # make plot
     if noplot != True:
@@ -252,11 +256,11 @@ def main(inarg=None):
     flanking = int(args.flanking_len)
     minalignmentlength2 = int(args.min_alignment_length)
     if minalignmentlength2 > flanking:
-        print('[Error] min_alignment_length should be less than flanking_len.')
+        logger.error('min_alignment_length should be less than flanking_len.')
         sys.exit(0)
     minalignmentidentity2 = float(args.min_alignment_identity) / 100
     if minalignmentidentity2 < 0 or minalignmentidentity2 > 1:
-        print('[Error] min_alignment_identity should be within 0~100.')
+        logger.error('min_alignment_identity should be within 0~100.')
         sys.exit(0)
     maxfillinglen = int(args.max_filling_len)
     prefix = args.prefix
@@ -272,7 +276,9 @@ def main(inarg=None):
     util.check_prerequisite([aligner])
 
     # run
-    args = [draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner]
-    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')
-    util.run(GapFiller, args)
+    logger.info(f'Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, '+
+                f'flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, '+
+                f'maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, '+
+                f'minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')
+    GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
+            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner)
