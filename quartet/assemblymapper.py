@@ -10,7 +10,9 @@ from . import util, teloexplorer
                      
 ### MAIN PROGRAM ###
 def AssemblyMapper(args):
-    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes = args
+    refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, prefix, \
+    threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, \
+    overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo = args
     
     # split scaffolds to contigs and remove short contigs
     print('[Info] Filtering contigs input...')
@@ -38,31 +40,31 @@ def AssemblyMapper(args):
         contigsdict = inputdict
 
     # check telomere in contigs
-    # TODO: add skip telo option; don't use main entry to skip complete info
-    print('[Info] Checking telomere in contigs...')
-    telofile = f'tmp/{prefix}.tig.telo.info'
-    if not os.path.exists(telofile) or overwrite == True:
-        teloexplorer.main(['-i', f'{contigfile}', '-p', f'{prefix}.tig', '--noplot', '-c', f'{teclade}', '-m', f'{teminrepeattimes}'])
-        subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    monopolize = []
-    forceleft = []
-    forceright = []
-    refdict = util.readFastaAsDict(refgenomefile)
-    minchrlen = min([len(y) for x, y in refdict.items()])
-    if os.path.exists(telofile):
-        with open(telofile, 'r') as telo:
-            for line in telo:
-                if line.startswith('#'):
-                    continue
-                tigid, tiglen, status = line.split()[0:3]
-                if status == 'both' and int(tiglen) >= minchrlen / 2:
-                    monopolize.append(tigid)
-                elif status == 'left':
-                    forceleft.append(tigid)
-                elif status == 'right':
-                    forceright.append(tigid)
-    else:
-        print('[Warning] Cannot identify telomeres in contigs.')
+    if notelo == False:
+        print('[Info] Checking telomere in contigs...')
+        telofile = f'tmp/{prefix}.tig.telo.info'
+        if not os.path.exists(telofile) or overwrite == True:
+            teloexplorer.TeloExplorer([f'{contigfile}', f'{teclade}', int(teminrepeattimes), f'{prefix}.tig', True])
+            subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        monopolize = []
+        forceleft = []
+        forceright = []
+        refdict = util.readFastaAsDict(refgenomefile)
+        minchrlen = min([len(y) for x, y in refdict.items()])
+        if os.path.exists(telofile):
+            with open(telofile, 'r') as telo:
+                for line in telo:
+                    if line.startswith('#'):
+                        continue
+                    tigid, tiglen, status = line.split()[0:3]
+                    if status == 'both' and int(tiglen) >= minchrlen / 2:
+                        monopolize.append(tigid)
+                    elif status == 'left':
+                        forceleft.append(tigid)
+                    elif status == 'right':
+                        forceright.append(tigid)
+        else:
+            print('[Warning] Cannot identify telomeres in contigs.')
 
     # reduce memory   
     with open(f'tmp/{prefix}.totaldict.fasta', 'w') as tmptotaldict:
@@ -339,6 +341,7 @@ def main(inarg=None):
     parser.add_argument('--deltafilteroption', dest='deltafilteroption', default='', help='Pass additional parameters to delta-filter program.')
     parser.add_argument('--teclade', dest='te_clade', choices=['plant', 'animal', 'other'], default='other', help='Specify clade of this genome for telomere search. Plant will search TTTAGGG, animal will search TTAGGG, other will use tidk explore\'s suggestion, default: other')
     parser.add_argument('--teminrepeattimes', dest='te_min_repeat_times', type=int, default=100, help='The min repeat times to considered as telomere, default: 100')
+    parser.add_argument('--notelo', dest='notelo', action='store_true', default=False, help='Skip telomere-assisted ordering and orientation.')
 
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
     
@@ -363,6 +366,7 @@ def main(inarg=None):
     overwrite = args.overwrite
     teclade = args.te_clade
     teminrepeattimes = args.te_min_repeat_times
+    notelo = args.notelo
     util.check_prerequisite(['delta-filter', 'show-coords'])
     if aligner == 'mummer':
         util.check_prerequisite(['nucmer'])
@@ -377,6 +381,12 @@ def main(inarg=None):
     
     # run
     args = [refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
-            prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes]
-    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength}, minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity}, prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep}, groupcontig={groupcontig}, chimera={chimera}, plot={plot}, noplot={noplot}, overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption}, minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}')
+            prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, 
+            nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo]
+    print(f'[Info] Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength},'+
+          f' minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity},'+
+          f' prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep},'+
+          f' groupcontig={groupcontig}, chimera={chimera}, plot={plot}, noplot={noplot},'+
+          f' overwrite={overwrite}, nucmeroption={nucmeroption}, deltafilteroption={deltafilteroption},'+
+          f' minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}, notelo={notelo}')
     util.run(AssemblyMapper, args)
