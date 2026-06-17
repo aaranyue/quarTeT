@@ -242,7 +242,7 @@ def main(inarg=None):
 
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
 
-    # parse input paramater
+    # parse input parameters
     genomefile = util.decompress(args.genome_fasta)
 
     tegfffile = util.decompress(args.TE)
@@ -288,7 +288,7 @@ def main(inarg=None):
     util.check_prerequisite(['trf', 'cd-hit-est', 'makeblastdb', 'blastn'])
 
     # run
-    logger.info(f'Paramater: genomefile={genomefile}, tegfffile={tegfffile}, genegfffile={genegfffile}, '+
+    logger.info(f'Parameters: genomefile={genomefile}, tegfffile={tegfffile}, genegfffile={genegfffile}, '+
                 f'minperiod={minperiod}, maxperiod={maxperiod}, e={e}, maxgap={maxgap}, minlength={minlength}, '+
                 f'prefix={prefix}, threads={threads}, overwrite={overwrite}, noplot={noplot}, '+
                 f'match={match}, mismatch={mismatch}, delta={delta}, PctMatch={PctMatch}, PctIndel={PctIndel}, '+

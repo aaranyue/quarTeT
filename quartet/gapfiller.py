@@ -250,7 +250,7 @@ def main(inarg=None):
 
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
 
-    # parse input paramater
+    # parse input parameters
     draftgenomefile = util.decompress(args.draft_genome)
     gapclosercontigfilelist = [util.decompress(x) for x in args.gapcloser_contig]
     flanking = int(args.flanking_len)
@@ -276,7 +276,7 @@ def main(inarg=None):
     util.check_prerequisite([aligner])
 
     # run
-    logger.info(f'Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, '+
+    logger.info(f'Parameters: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, '+
                 f'flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, '+
                 f'maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, '+
                 f'minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')

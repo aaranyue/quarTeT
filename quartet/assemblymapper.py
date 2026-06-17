@@ -348,7 +348,7 @@ def main(inarg=None):
 
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
     
-    # parse input paramater
+    # parse input parameters
     refgenomefile = util.decompress(args.reference_genome)
     qryfile = util.decompress(args.contigs)
     mincontiglength = int(args.min_contig_length)
@@ -385,7 +385,7 @@ def main(inarg=None):
         util.check_prerequisite(['tidk'])
     
     # run
-    logger.info(f'Paramater: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength},'+
+    logger.info(f'Parameters: refgenomefile={refgenomefile}, qryfile={qryfile}, mincontiglength={mincontiglength},'+
           f' minalignmentlength={minalignmentlength}, minalignmentidentity={minalignmentidentity},'+
           f' prefix={prefix}, threads={threads}, aligner={aligner}, nofilter={nofilter}, keep={keep},'+
           f' groupcontig={groupcontig}, chimera={chimera}, plot={plot}, noplot={noplot},'+

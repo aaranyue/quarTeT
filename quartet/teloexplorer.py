@@ -165,7 +165,7 @@ def main(inarg=None):
     
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
     
-    # parse input paramater
+    # parse input parameters
     genomefile = util.decompress(args.genome)
     clade = args.clade
     minrepeattimes = args.min_repeat_times
@@ -176,6 +176,6 @@ def main(inarg=None):
     util.check_prerequisite(['tidk'])
 
     # run
-    logger.info(f'Paramater: genomefile={genomefile}, clade={clade}, minrepeattimes={minrepeattimes}, prefix={prefix}, noplot={noplot}')
+    logger.info(f'Parameters: genomefile={genomefile}, clade={clade}, minrepeattimes={minrepeattimes}, prefix={prefix}, noplot={noplot}')
     TeloExplorer(genomefile, clade, minrepeattimes, prefix, noplot)
     
