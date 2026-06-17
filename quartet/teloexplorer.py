@@ -178,4 +178,4 @@ def main(inarg=None):
     # run
     logger.info(f'Parameters: genomefile={genomefile}, clade={clade}, minrepeattimes={minrepeattimes}, prefix={prefix}, noplot={noplot}')
     TeloExplorer(genomefile, clade, minrepeattimes, prefix, noplot)
-    
+    logger.info('Done.')

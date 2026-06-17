@@ -297,3 +297,4 @@ def main(inarg=None):
     CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, maxgap, minlength, 
             prefix, threads, overwrite, noplot, match, mismatch, delta, PctMatch, PctIndel, minscore, identity, 
             periodmaxdelta, wordlength, max_TR_length)
+    logger.info('Done.')

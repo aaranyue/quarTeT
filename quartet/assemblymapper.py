@@ -7,7 +7,7 @@ import re
 import os
 import sys
 import logging
-from . import util, teloexplorer
+from . import util
 
 logger = logging.getLogger(__name__)
                      
@@ -17,12 +17,13 @@ def AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, 
     overwrite, nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo):
     
     # split scaffolds to contigs and remove short contigs
-    logger.info('Filtering contigs input...')
+    logger.info('Importing contigs...')
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     inputdict = util.readFastaAsDict(qryfile)
     totaldict = inputdict.copy()
     contigsdict = {}
     if nofilter != True:
+        logger.info('Filtering contigs input...')
         for tigid, seq in inputdict.items():
             if 'N'*100 in seq:
                 i = 1
@@ -41,18 +42,20 @@ def AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, 
         contigfile = qryfile
         contigsdict = inputdict
 
+    monopolize = []
+    forceleft = []
+    forceright = []
+    refdict = util.readFastaAsDict(refgenomefile)
+    minchrlen = min([len(y) for x, y in refdict.items()])
     # check telomere in contigs
     if notelo == False:
         logger.info('Checking telomere in contigs...')
         telofile = f'tmp/{prefix}.tig.telo.info'
         if not os.path.exists(telofile) or overwrite == True:
+            from . import teloexplorer
             teloexplorer.TeloExplorer(f'{contigfile}', f'{teclade}', int(teminrepeattimes), f'{prefix}.tig', True)
             subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        monopolize = []
-        forceleft = []
-        forceright = []
-        refdict = util.readFastaAsDict(refgenomefile)
-        minchrlen = min([len(y) for x, y in refdict.items()])
+
         if os.path.exists(telofile):
             with open(telofile, 'r') as telo:
                 for line in telo:
@@ -393,4 +396,5 @@ def main(inarg=None):
           f' minimapoption={minimapoption}, teclade={teclade}, teminrepeattimes={teminrepeattimes}, notelo={notelo}')
     AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, minalignmentidentity, 
             prefix, threads, aligner, nofilter, keep, groupcontig, chimera, plot, noplot, overwrite, 
-            nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo) 
+            nucmeroption, deltafilteroption, minimapoption, teclade, teminrepeattimes, notelo)
+    logger.info('Done.')

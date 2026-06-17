@@ -282,3 +282,4 @@ def main(inarg=None):
                 f'minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')
     GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
             maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner)
+    logger.info('Done.')
