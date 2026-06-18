@@ -55,7 +55,9 @@ def AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, 
             from . import teloexplorer
             teloexplorer.TeloExplorer(f'{contigfile}', f'{teclade}', int(teminrepeattimes), f'{prefix}.tig', True)
             subprocess.run(f'mv -t tmp/ -f {prefix}.tig.telo.info', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-
+        else:
+            logger.warning(f'Reuse existing file {telofile}')
+            
         if os.path.exists(telofile):
             with open(telofile, 'r') as telo:
                 for line in telo:
@@ -136,7 +138,7 @@ def AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, 
                 allAlignment[f'{refid}#{qryid}'] = alignment
     if allAlignment == {}:
         logger.error(f'All alignments are filtered. Recommended to adjust filter arguments.')
-        sys.exit(0)
+        sys.exit(1)
 
     # analysis each alignment and create map
     logger.info('Analysising aligments...')
@@ -272,7 +274,7 @@ def AssemblyMapper(refgenomefile, qryfile, mincontiglength, minalignmentlength, 
                     fa.write(f'>{tigid}\n{totaldict[tigid]}\n')
     if os.path.getsize(draftgenomefastafile) == 0:
         logger.error('No Chromosome can be assembly.')
-        sys.exit(0)
+        sys.exit(1)
     logger.info(f'[Output] draft genome fasta file write to: {draftgenomefastafile}')
     
     draftgenomeagpfile = f'{prefix}.draftgenome.agp'
@@ -359,7 +361,7 @@ def main(inarg=None):
     minalignmentidentity = float(args.min_alignment_identity) / 100
     if minalignmentidentity < 0 or minalignmentidentity > 1:
         logger.error('min_alignment_identity should be within 0~100.')
-        sys.exit(0)
+        sys.exit(1)
     prefix = args.prefix
     threads = args.threads
     aligner = args.aligner

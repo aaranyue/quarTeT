@@ -11,6 +11,7 @@ Task include:
 1.3.0
 - Breaking: new entry point `quartet` instead of `python3 {path}/quartet.py` to support conda/pip install.
 - Add `--notelo` option for AssemblyMapper.
+- Improve `join` mode of GapFiller, thanks to BRNiu, [PR #66](https://github.com/aaranyue/quarTeT/pull/66)
 - Change behavior with gzip file: create new file instead of replace.
 - Improve logging system instead of raw print / delay output.
 
@@ -116,8 +117,9 @@ quarTeT command-line program is availble for Linux.
     - ggplot2 (tested on 3.3.6 and 3.4.4)
 
 All these dependencies can be easily install via conda:
-
-`conda create -n quarTeTdependencies --channel conda-forge --channel bioconda python=3.11.4 minimap2=2.26 mummer4=4.0.0rc1 trf=4.09.1 cd-hit=4.8.1 blast=2.14.0 tidk=0.2.31 r=4.3 r-rideogram=0.2.2 r-ggplot2=3.4.4 gnuplot=5.4 unimap=0.1`
+```
+conda create -n quartet --channel conda-forge --channel bioconda python minimap2 mummer4 trf cd-hit blast tidk r r-rideogram r-ggplot2 gnuplot unimap
+```
 
 #### Installation
 Via conda (planed, but incomplete):
@@ -235,6 +237,10 @@ Usage: quartet GapFiller <parameters>
   -t THREADS            Use number of threads, default: 1
   --enablejoin          Enable join mode to close the gaps. (Unstable)
   --joinonly            Use only join mode without fill, should be used with --enablejoin.
+  --join-min-overlap JOIN_MIN_OVERLAP
+                        The min overlap length required for join on draft genome components (bp), default: 50
+  --join-min-identity JOIN_MIN_IDENTITY
+                        The min overlap identity required for join on draft genome components (%), default: 30
   --overwrite           Overwrite existing alignment file instead of reuse.
   --minimapoption MINIMAPOPTION
                         Pass additional parameters to minimap2 program, default: -x asm5

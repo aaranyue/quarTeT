@@ -80,11 +80,13 @@ def mummer(reffasta, qryfasta, prefix, suffix, nucmeroption, deltafilteroption, 
     subprocess.run(f'mv -t ./ -f tmp/{prefix}.{suffix}.delta', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if not os.path.exists(f'{prefix}.{suffix}.delta') or overwrite == True:
         runsub(f'nucmer {nucmeroption} -p {prefix}.{suffix} {reffasta} {qryfasta}', 'nucmer')
+    else:
+        logger.warning(f'Reuse existing file {prefix}.{suffix}.delta')
     runsub(f'delta-filter {deltafilteroption} -m -q {prefix}.{suffix}.delta > {prefix}.{suffix}.filter.delta', 'delta-filter')
     runsub(f'show-coords -T -H {prefix}.{suffix}.filter.delta > {prefix}.{suffix}.coords', 'show-coords')
     if os.path.getsize(f'{prefix}.{suffix}.coords') == 0:
         logger.error(f'No alignment found or all alignments are filtered. Recommended to adjust filter arguments.')
-        sys.exit(0)
+        sys.exit(1)
     if plot == True:
         runsub(f'mummerplot -t png -p {prefix}.{suffix} {prefix}.{suffix}.filter.delta', 'mummerplot')
         with open(f'{prefix}.{suffix}.gp', 'r') as gp:
@@ -109,7 +111,7 @@ def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite, 
         cmdr = subprocess.run(f'{aligner} {minimapoption} -c -o {prefix}.{suffix}.paf {reffasta} {qryfasta}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         if '[morecore]' in cmdr.stderr.decode("utf-8") or cmdr.returncode < 0:
             logger.error(f'Memory insufficient.')
-            sys.exit(0)
+            sys.exit(1)
         elif cmdr.returncode != 0:
             logger.error(f'Unexcepted error occur in {aligner} as follow:\n'+
                 f'cmd: {cmdr.args}\n'+
@@ -117,9 +119,11 @@ def minimap(reffasta, qryfasta, prefix, suffix, minimapoption, plot, overwrite, 
                 f'stdout:\n{cmdr.stdout.decode("utf-8")}\n'+
                 f'stderr:\n{cmdr.stderr.decode("utf-8")}')
             sys.exit(1)
+    else:
+        logger.warning(f'Reuse existing file {prefix}.{suffix}.paf')
     if os.path.getsize(f'{prefix}.{suffix}.paf') == 0:
         logger.error(f'No alignment found.')
-        sys.exit(0)
+        sys.exit(1)
     if plot == True:
         # convert paf to delta
         class Alignment:

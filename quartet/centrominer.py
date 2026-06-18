@@ -42,6 +42,8 @@ def CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, max
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
         if not os.path.exists(datfile) or overwrite == True:
             util.runsub(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', 'trf', 1, False)
+        else:
+            logger.warning(f'Reuse existing file {datfile}')
         subprocess.run(f'mv -t tmp/trfdat -f {prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         with open(datfile, 'r') as trfResult:
             linelist = []
@@ -262,7 +264,7 @@ def main(inarg=None):
 
     if len(args.trf_parameter) != 6:
         logger.error('TRF parameter should be <match> <mismatch> <delta> <PM> <PI> <minscore>.')
-        sys.exit(0)
+        sys.exit(1)
     match = int(args.trf_parameter[0])
     mismatch = int(args.trf_parameter[1])
     delta = int(args.trf_parameter[2])
@@ -274,7 +276,7 @@ def main(inarg=None):
     periodmaxdelta = int(args.cluster_max_delta)
     if identity < 0.8 or identity > 1:
         logger.error('Cluster identity should be set in 0.8 ~ 1.')
-        sys.exit(0)
+        sys.exit(1)
     elif identity < 0.85:
         wordlength = 5
     elif identity < 0.88:

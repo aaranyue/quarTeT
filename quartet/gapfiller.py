@@ -13,17 +13,20 @@ logger = logging.getLogger(__name__)
 
 ### MAIN PROGRAM ###
 def GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-              maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner):
+              maxfillinglen, prefix, threads, minimapoption, overwrite, 
+              enablejoin, joinonly, joinminoverlap, joinminidentity, noplot, aligner):
 
     # get gap's flanking seq
     logger.info('Getting gaps flanking sequence...')
     draftgenomedict = util.readFastaAsDict(draftgenomefile)
     flankingdict = {}
     gapdict = {}
+    gapcomponentdict = {}
     for sid, seq in draftgenomedict.items():
         if 'N'*100 in seq:
             i = 1
             gapsitelist = [r.span() for r in re.finditer(r'N+', seq)]
+            prev_gap_end = 0
             for gapsite in gapsitelist:
                 start = max(gapsite[0] - flanking, 0)
                 end = min(gapsite[1] + flanking, len(seq))
@@ -36,6 +39,20 @@ def GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentle
                     flankingdict[f'{sid}.{i}.L'] = seq[start:gapsite[0]]
                     flankingdict[f'{sid}.{i}.R'] = seq[gapsite[1]:end]
                 gapdict[f'{sid}.{i}'] = seq[gapsite[0]:gapsite[1]]
+                left_component_start = prev_gap_end + 1
+                left_component_end = gapsite[0]
+                right_component_start = gapsite[1] + 1
+                if i < len(gapsitelist):
+                    right_component_end = gapsitelist[i][0]
+                else:
+                    right_component_end = len(seq)
+                gapcomponentdict[f'{sid}.{i}'] = {
+                    'left_seq': seq[left_component_start-1:left_component_end],
+                    'right_seq': seq[right_component_start-1:right_component_end],
+                    'left_range': (left_component_start, left_component_end),
+                    'right_range': (right_component_start, right_component_end),
+                }
+                prev_gap_end = gapsite[1]
                 i += 1
     if flankingdict == {}:
         logger.error('Input genome does not have valid gap.')
@@ -128,10 +145,37 @@ def GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentle
                 elif Laln['refend'] >= Raln['refstart'] and enablejoin == True:
                     if bestscore != 0:
                         continue
+                    componentinfo = gapcomponentdict.get(gapid)
+                    if componentinfo == None:
+                        continue
+                    min_overlap = min(joinminoverlap, len(componentinfo['left_seq']), len(componentinfo['right_seq']))
+
+                    left_seq = componentinfo['left_seq']
+                    right_seq = componentinfo['right_seq']
+                    min_identity = joinminidentity
+                    min_overlap = min_overlap
+                    max_check_len = flanking
+                    
+                    left_check = left_seq[-max_check_len:] if len(left_seq) > max_check_len else left_seq
+                    right_check = right_seq[:max_check_len] if len(right_seq) > max_check_len else right_seq
+                    max_overlap = min(len(left_check), len(right_check))
+                    
+                    if max_overlap == 0:
+                        continue
                     else:
-                        gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': 'join',
-                                                'seq': '', 'strand': Laln['strand'], 
-                                                'score': (Laln['identity'] + Raln['identity']) / 2}
+                        min_overlap = max(1, min(min_overlap, max_overlap))
+                        
+                        for overlap_len in range(max_overlap, 0, -1):
+                            left_overlap = left_check[-overlap_len:]
+                            right_overlap = right_check[:overlap_len]
+                            match_count = sum(1 for left_base, right_base in zip(left_overlap, right_overlap) if left_base == right_base)
+                            overlap_identity = match_count / overlap_len
+                            
+                            if overlap_len >= min_overlap and overlap_identity >= min_identity:
+                                gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': overlap_len,
+                                                        'seq': '', 'strand': Laln['strand'], 
+                                                        'score': (Laln['identity'] + Raln['identity']) / 2}
+                                break
     
     logger.info(f'All files processed.')
     if gapcloserdict == {}:
@@ -148,7 +192,7 @@ def GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentle
         for gapid in gapdict:
             if gapid in gapcloserdict:
                 info = gapcloserdict[gapid]
-                de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tClosed\t{info["sid"]}\t{info["range"]}\t{len(info["seq"])}\t{info["strand"]}\t{info["score"]}\n')
+                de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tClosed\t{info["sid"]}\t{info["range"]}\t{len(info["seq"]) if info["seq"] != '' else 'join'}\t{info["strand"]}\t{info["score"]}\n')
             else:
                 de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tNot_closed\n')
     logger.info(f'[Output] Filling detail write to: {filldetailfile}')
@@ -157,34 +201,54 @@ def GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentle
     filledfastafile = f'{prefix}.genome.filled.fasta'
     filledragpfile = f'{prefix}.genome.filled.modified.agp'
     draftgenomedict = util.readFastaAsDict(draftgenomefile)
+    closedsidset = {'.'.join(gapid.split('.')[:-1]) for gapid in gapcloserdict}
     with open(filledfastafile, 'w') as w, open(filledragpfile, 'w') as ragp:
         chrfastadict = {}
         for sid, seq in draftgenomedict.items():
-            if sid not in ['.'.join(gapid.split('.')[:-1]) for gapid in gapcloserdict]:
+            if sid not in closedsidset:
                 w.write(f'>{sid}\n{seq}\n')
                 chrfastadict[sid] = seq
             else:
                 matches = list(re.finditer(r'N{100,}', seq))
-                seqlist = []
+                segments = []
                 start = 0
                 for match in matches:
                     end = match.start()
-                    seqlist.append((seq[start:end], 'P', sid, start + 1, end, '+'))
+                    segments.append((seq[start:end], start + 1, end))
                     start = match.end()
-                seqlist.append((seq[start:], 'P', sid, start + 1, len(seq), '+'))
-                # seqlist: (seq, agp[5~9])
-                for i in range(len(seqlist) - 1):
+                segments.append((seq[start:], start + 1, len(seq)))
+                
+                seqlist = []
+                if segments[0][0] != '':
+                    seqlist.append((segments[0][0], 'P', sid, segments[0][1], segments[0][2], '+'))
+                for i in range(len(matches)):
                     gapid = f'{sid}.{i+1}'
+                    nextseq, nextstart, nextend = segments[i+1]
                     if gapid in gapcloserdict:
-                        if gapcloserdict[gapid]['range'] != 'join':
-                            seqlist.insert(2*i+1, (gapcloserdict[gapid]['seq'], 'W', gapcloserdict[gapid]['sid'], gapcloserdict[gapid]['range'].split('-')[0], gapcloserdict[gapid]['range'].split('-')[1], gapcloserdict[gapid]['strand']))
+                        if gapcloserdict[gapid]['seq'] != '':
+                            seqlist.append((gapcloserdict[gapid]['seq'], 'W', gapcloserdict[gapid]['sid'], 
+                                            gapcloserdict[gapid]['range'].split('-')[0], gapcloserdict[gapid]['range'].split('-')[1], 
+                                            gapcloserdict[gapid]['strand']))
+                            if nextseq != '':
+                                seqlist.append((nextseq, 'P', sid, nextstart, nextend, '+'))
+                        else:
+                            trimlen = gapcloserdict[gapid]['range']
+                            trimmedseq = nextseq[trimlen:]
+                            trimmedstart = nextstart + trimlen
+                            if trimmedseq != '':
+                                seqlist.append((trimmedseq, 'P', sid, trimmedstart, nextend, '+'))
                     else:
-                        seqlist.insert(2*i+1, (gapdict[gapid], 'U' if len(gapdict[gapid]) == 100 else 'N', len(gapdict[gapid]), 'scaffold', 'yes', 'unspecified'))
+                        seqlist.append((gapdict[gapid], 'U' if len(gapdict[gapid]) == 100 else 'N', len(gapdict[gapid]), 'scaffold', 'yes', 'unspecified'))
+                        if nextseq != '':
+                            seqlist.append((nextseq, 'P', sid, nextstart, nextend, '+'))
                 newseq = ''
-                for i in range(len(seqlist)):
-                    subseq, agp5, agp6, agp7, agp8, agp9 = seqlist[i]
-                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(newseq)+len(subseq)}\t{i+1}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
+                partnum = 1
+                for subseq, agp5, agp6, agp7, agp8, agp9 in seqlist:
+                    if subseq == '':
+                        continue
+                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(newseq)+len(subseq)}\t{partnum}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
                     newseq += subseq
+                    partnum += 1
                 w.write(f'>{sid}\n{newseq}\n')
                 chrfastadict[f'{sid}'] = newseq
     logger.info(f'[Output] Filled genome fasta file write to: {filledfastafile}')
@@ -244,6 +308,8 @@ def main(inarg=None):
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
     parser.add_argument('--enablejoin', dest='enablejoin', action='store_true', default=False, help='Enable join mode to close the gaps. (Unstable)')
     parser.add_argument('--joinonly', dest='joinonly', action='store_true', default=False, help='Use only join mode without fill, should be used with --enablejoin.')
+    parser.add_argument('--join-min-overlap', dest='join_min_overlap', type=int, default=50, help='The min overlap length required for join on draft genome components (bp), default: 50')
+    parser.add_argument('--join-min-identity', dest='join_min_identity', type=float, default=30, help='The min overlap identity required for join on draft genome components (%%), default: 30')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
     parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
@@ -257,11 +323,11 @@ def main(inarg=None):
     minalignmentlength2 = int(args.min_alignment_length)
     if minalignmentlength2 > flanking:
         logger.error('min_alignment_length should be less than flanking_len.')
-        sys.exit(0)
+        sys.exit(1)
     minalignmentidentity2 = float(args.min_alignment_identity) / 100
     if minalignmentidentity2 < 0 or minalignmentidentity2 > 1:
         logger.error('min_alignment_identity should be within 0~100.')
-        sys.exit(0)
+        sys.exit(1)
     maxfillinglen = int(args.max_filling_len)
     prefix = args.prefix
     threads = args.threads
@@ -270,6 +336,14 @@ def main(inarg=None):
     aligner = args.aligner
     enablejoin = args.enablejoin
     joinonly = args.joinonly
+    joinminoverlap = int(args.join_min_overlap)
+    if joinminoverlap < 1:
+        logger.error('join_min_overlap should be at least 1.')
+        sys.exit(1)
+    joinminidentity = float(args.join_min_identity) / 100
+    if joinminidentity < 0 or joinminidentity > 1:
+        logger.error('join_min_identity should be within 0~100.')
+        sys.exit(1)
     noplot = args.noplot
 
     # check prerequisites
@@ -279,7 +353,9 @@ def main(inarg=None):
     logger.info(f'Parameters: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, '+
                 f'flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, '+
                 f'maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, '+
-                f'minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')
+                f'minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, '+
+                f'joinonly={joinonly}, joinminoverlap={joinminoverlap}, joinminidentity={joinminidentity}, noplot={noplot}')
     GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner)
+            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, 
+            joinminoverlap, joinminidentity, noplot, aligner)
     logger.info('Done.')
