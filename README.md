@@ -122,9 +122,9 @@ conda create -n quartet --channel conda-forge --channel bioconda python minimap2
 ```
 
 #### Installation
-Via conda (planed, but incomplete):
+Via conda (A kind soul have uploaded v1.2.5; v1.3.0 is pending):
 ```
-conda install --channel conda-forge --channel bioconda quartet
+conda install --channel conda-forge --channel bioconda quartet-bio
 ```
 
 Manual install:
