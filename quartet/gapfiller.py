@@ -1,41 +1,62 @@
 #!/usr/bin/env python3
-# Last modified: V1.2.4
+# Last modified: V1.3.0
 
 import sys
 import argparse
 import subprocess
 import os
 import re
-import quartet_util
+import logging
+from . import util
+
+logger = logging.getLogger(__name__)
 
 ### MAIN PROGRAM ###
-def GapFiller(args):
-    draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner = args
+def GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
+              maxfillinglen, prefix, threads, minimapoption, overwrite, 
+              enablejoin, joinonly, joinminoverlap, joinminidentity, noplot, aligner):
 
     # get gap's flanking seq
-    print('[Info] Getting gaps flanking sequence...')
-    draftgenomedict = quartet_util.readFastaAsDict(draftgenomefile)
+    logger.info('Getting gaps flanking sequence...')
+    draftgenomedict = util.readFastaAsDict(draftgenomefile)
     flankingdict = {}
     gapdict = {}
+    gapcomponentdict = {}
     for sid, seq in draftgenomedict.items():
         if 'N'*100 in seq:
             i = 1
             gapsitelist = [r.span() for r in re.finditer(r'N+', seq)]
+            prev_gap_end = 0
             for gapsite in gapsitelist:
                 start = max(gapsite[0] - flanking, 0)
                 end = min(gapsite[1] + flanking, len(seq))
                 leftseq = seq[start:gapsite[0]]
                 rightseq = seq[gapsite[1]:end]
                 if 'N'*100 in leftseq or 'N'*100 in rightseq:
-                    print(f'[Warning] Flanking sequence of gap {sid}.{i} contains another gap. This indicates two gaps are too close and a very small contig is placed in between.')
+                    logger.warning(f'Flanking sequence of gap {sid}.{i} contains another gap. '+
+                                   'This indicates two gaps are too close and a very small contig is placed in between.')
                 else:
                     flankingdict[f'{sid}.{i}.L'] = seq[start:gapsite[0]]
                     flankingdict[f'{sid}.{i}.R'] = seq[gapsite[1]:end]
                 gapdict[f'{sid}.{i}'] = seq[gapsite[0]:gapsite[1]]
+                left_component_start = prev_gap_end + 1
+                left_component_end = gapsite[0]
+                right_component_start = gapsite[1] + 1
+                if i < len(gapsitelist):
+                    right_component_end = gapsitelist[i][0]
+                else:
+                    right_component_end = len(seq)
+                gapcomponentdict[f'{sid}.{i}'] = {
+                    'left_seq': seq[left_component_start-1:left_component_end],
+                    'right_seq': seq[right_component_start-1:right_component_end],
+                    'left_range': (left_component_start, left_component_end),
+                    'right_range': (right_component_start, right_component_end),
+                }
+                prev_gap_end = gapsite[1]
                 i += 1
     if flankingdict == {}:
-        print('[Error] Input genome does not have valid gap.')
-        sys.exit(0)
+        logger.error('Input genome does not have valid gap.')
+        sys.exit(1)
     subprocess.run(f'mkdir tmp', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     flankingfastafile = f'tmp/{prefix}.gap.flanking.fasta'
     with open(flankingfastafile, 'w') as f:
@@ -47,8 +68,8 @@ def GapFiller(args):
     gapcloserdict = {}
     for gapfillfile in gapclosercontigfilelist:
         gapfiller = os.path.basename(gapfillfile)
-        print(f'[Info] gapfilling with {gapfiller}...')
-        gapfillfasta = quartet_util.readFastaAsDict(gapfillfile)
+        logger.info(f'gapfilling with {gapfiller}...')
+        gapfillfasta = util.readFastaAsDict(gapfillfile)
         
         # If gapfiller itself has gap, split it
         gapfilldict = {}
@@ -63,7 +84,7 @@ def GapFiller(args):
             else:
                 gapfilldict[sid] = seq
         if needsplit:
-            print(f'[Info] Gaps found in {gapfiller}. Split it to contigs.')
+            logger.info(f'Gaps found in {gapfiller}. Split it to contigs.')
             gapfillfile = f'tmp/{gapfiller}.splitcontig.fasta'
             with open(gapfillfile, 'w') as c:
                 for tigid, seq in gapfilldict.items():
@@ -77,7 +98,7 @@ def GapFiller(args):
         del gapfillfasta
         del gapfilldict
 
-        pafgapfillfile = quartet_util.minimap(gapfillfile, flankingfastafile, prefix, f'flank_map_{gapfiller}', minimapoption, False, overwrite, aligner)
+        pafgapfillfile = util.minimap(gapfillfile, flankingfastafile, prefix, f'flank_map_{gapfiller}', minimapoption, False, overwrite, aligner)
 
         allalignment = []
         with open(pafgapfillfile, 'r') as paf:
@@ -91,12 +112,12 @@ def GapFiller(args):
                                          'match': int(match), 'alignlen': int(alignlen), 'identity': int(match) / int(alignlen),
                                          'gapid': '.'.join(qryid.split('.')[:-1]), 'LR': qryid.split('.')[-1]})
         if allalignment == []:
-            print(f'[Info] No alignment for this file.')
+            logger.info(f'No alignment for this file.')
             continue
         
         # process each gap
-        print(f'[Info] Analysising Alignments...')
-        gapfillfasta = quartet_util.readFastaAsDict(f'tmp/{prefix}.gapfillfasta.fasta')
+        logger.info(f'Analysising Alignments...')
+        gapfillfasta = util.readFastaAsDict(f'tmp/{prefix}.gapfillfasta.fasta')
         for gapid in gapdict:
             Leftanchor = [aln for aln in allalignment if aln['gapid'] == gapid and aln['LR'] == 'L']
             Rightanchor = [aln for aln in allalignment if aln['gapid'] == gapid and aln['LR'] == 'R']
@@ -119,23 +140,50 @@ def GapFiller(args):
                         if len(fillseq) > maxfillinglen or fillseq == '':
                             continue
                         gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': f'{fillstart}-{fillend}',
-                                                'seq': fillseq if Laln['strand'] == '+' else quartet_util.reversedseq(fillseq), 'strand': Laln['strand'], 
+                                                'seq': fillseq if Laln['strand'] == '+' else util.reversedseq(fillseq), 'strand': Laln['strand'], 
                                                 'score': score}
                 elif Laln['refend'] >= Raln['refstart'] and enablejoin == True:
                     if bestscore != 0:
                         continue
+                    componentinfo = gapcomponentdict.get(gapid)
+                    if componentinfo == None:
+                        continue
+                    min_overlap = min(joinminoverlap, len(componentinfo['left_seq']), len(componentinfo['right_seq']))
+
+                    left_seq = componentinfo['left_seq']
+                    right_seq = componentinfo['right_seq']
+                    min_identity = joinminidentity
+                    min_overlap = min_overlap
+                    max_check_len = flanking
+                    
+                    left_check = left_seq[-max_check_len:] if len(left_seq) > max_check_len else left_seq
+                    right_check = right_seq[:max_check_len] if len(right_seq) > max_check_len else right_seq
+                    max_overlap = min(len(left_check), len(right_check))
+                    
+                    if max_overlap == 0:
+                        continue
                     else:
-                        gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': 'join',
-                                                'seq': '', 'strand': Laln['strand'], 
-                                                'score': (Laln['identity'] + Raln['identity']) / 2}
+                        min_overlap = max(1, min(min_overlap, max_overlap))
+                        
+                        for overlap_len in range(max_overlap, 0, -1):
+                            left_overlap = left_check[-overlap_len:]
+                            right_overlap = right_check[:overlap_len]
+                            match_count = sum(1 for left_base, right_base in zip(left_overlap, right_overlap) if left_base == right_base)
+                            overlap_identity = match_count / overlap_len
+                            
+                            if overlap_len >= min_overlap and overlap_identity >= min_identity:
+                                gapcloserdict[gapid] = {'sid': f'{gapfillfile}@{Laln["refid"]}', 'range': overlap_len,
+                                                        'seq': '', 'strand': Laln['strand'], 
+                                                        'score': (Laln['identity'] + Raln['identity']) / 2}
+                                break
     
-    print(f'[Info] All files processed.')
+    logger.info(f'All files processed.')
     if gapcloserdict == {}:
-        print(f'[Error] No gap can be closed.')
-        sys.exit(0)
+        logger.error(f'No gap can be closed.')
+        sys.exit(1)
 
     # make detail
-    print(f'[Info] Generating filled fasta file and statistics...')
+    logger.info(f'Generating filled fasta file and statistics...')
     filldetailfile = f'{prefix}.genome.filled.detail'
     with open(filldetailfile, 'w') as de:
         totalfilledlen = sum([len(gapcloserdict[x]['seq']) for x in gapcloserdict])
@@ -144,47 +192,67 @@ def GapFiller(args):
         for gapid in gapdict:
             if gapid in gapcloserdict:
                 info = gapcloserdict[gapid]
-                de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tClosed\t{info["sid"]}\t{info["range"]}\t{len(info["seq"])}\t{info["strand"]}\t{info["score"]}\n')
+                de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tClosed\t{info["sid"]}\t{info["range"]}\t{len(info["seq"]) if info["seq"] != '' else 'join'}\t{info["strand"]}\t{info["score"]}\n')
             else:
                 de.write(f'{".".join(gapid.split(".")[:-1])}\t{gapid.split(".")[-1]}\tNot_closed\n')
-    print(f'[Output] Filling detail write to: {filldetailfile}')
+    logger.info(f'[Output] Filling detail write to: {filldetailfile}')
     
     # make fasta
     filledfastafile = f'{prefix}.genome.filled.fasta'
     filledragpfile = f'{prefix}.genome.filled.modified.agp'
-    draftgenomedict = quartet_util.readFastaAsDict(draftgenomefile)
+    draftgenomedict = util.readFastaAsDict(draftgenomefile)
+    closedsidset = {'.'.join(gapid.split('.')[:-1]) for gapid in gapcloserdict}
     with open(filledfastafile, 'w') as w, open(filledragpfile, 'w') as ragp:
         chrfastadict = {}
         for sid, seq in draftgenomedict.items():
-            if sid not in ['.'.join(gapid.split('.')[:-1]) for gapid in gapcloserdict]:
+            if sid not in closedsidset:
                 w.write(f'>{sid}\n{seq}\n')
                 chrfastadict[sid] = seq
             else:
                 matches = list(re.finditer(r'N{100,}', seq))
-                seqlist = []
+                segments = []
                 start = 0
                 for match in matches:
                     end = match.start()
-                    seqlist.append((seq[start:end], 'P', sid, start + 1, end, '+'))
+                    segments.append((seq[start:end], start + 1, end))
                     start = match.end()
-                seqlist.append((seq[start:], 'P', sid, start + 1, len(seq), '+'))
-                # seqlist: (seq, agp[5~9])
-                for i in range(len(seqlist) - 1):
+                segments.append((seq[start:], start + 1, len(seq)))
+                
+                seqlist = []
+                if segments[0][0] != '':
+                    seqlist.append((segments[0][0], 'P', sid, segments[0][1], segments[0][2], '+'))
+                for i in range(len(matches)):
                     gapid = f'{sid}.{i+1}'
+                    nextseq, nextstart, nextend = segments[i+1]
                     if gapid in gapcloserdict:
-                        if gapcloserdict[gapid]['range'] != 'join':
-                            seqlist.insert(2*i+1, (gapcloserdict[gapid]['seq'], 'W', gapcloserdict[gapid]['sid'], gapcloserdict[gapid]['range'].split('-')[0], gapcloserdict[gapid]['range'].split('-')[1], gapcloserdict[gapid]['strand']))
+                        if gapcloserdict[gapid]['seq'] != '':
+                            seqlist.append((gapcloserdict[gapid]['seq'], 'W', gapcloserdict[gapid]['sid'], 
+                                            gapcloserdict[gapid]['range'].split('-')[0], gapcloserdict[gapid]['range'].split('-')[1], 
+                                            gapcloserdict[gapid]['strand']))
+                            if nextseq != '':
+                                seqlist.append((nextseq, 'P', sid, nextstart, nextend, '+'))
+                        else:
+                            trimlen = gapcloserdict[gapid]['range']
+                            trimmedseq = nextseq[trimlen:]
+                            trimmedstart = nextstart + trimlen
+                            if trimmedseq != '':
+                                seqlist.append((trimmedseq, 'P', sid, trimmedstart, nextend, '+'))
                     else:
-                        seqlist.insert(2*i+1, (gapdict[gapid], 'U' if len(gapdict[gapid]) == 100 else 'N', len(gapdict[gapid]), 'scaffold', 'yes', 'unspecified'))
+                        seqlist.append((gapdict[gapid], 'U' if len(gapdict[gapid]) == 100 else 'N', len(gapdict[gapid]), 'scaffold', 'yes', 'unspecified'))
+                        if nextseq != '':
+                            seqlist.append((nextseq, 'P', sid, nextstart, nextend, '+'))
                 newseq = ''
-                for i in range(len(seqlist)):
-                    subseq, agp5, agp6, agp7, agp8, agp9 = seqlist[i]
-                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(newseq)+len(subseq)}\t{i+1}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
+                partnum = 1
+                for subseq, agp5, agp6, agp7, agp8, agp9 in seqlist:
+                    if subseq == '':
+                        continue
+                    ragp.write(f'{sid}\t{len(newseq)+1}\t{len(newseq)+len(subseq)}\t{partnum}\t{agp5}\t{agp6}\t{agp7}\t{agp8}\t{agp9}\n')
                     newseq += subseq
+                    partnum += 1
                 w.write(f'>{sid}\n{newseq}\n')
                 chrfastadict[f'{sid}'] = newseq
-    print(f'[Output] Filled genome fasta file write to: {filledfastafile}')
-    print(f'[Output] Modified chromosome agp file write to: {filledragpfile}')
+    logger.info(f'[Output] Filled genome fasta file write to: {filledfastafile}')
+    logger.info(f'[Output] Modified chromosome agp file write to: {filledragpfile}')
                 
     # make stat
     filledstatfile = f'{prefix}.genome.filled.stat'
@@ -212,18 +280,23 @@ def GapFiller(args):
                 info.write(f'{sid}\t{len(seq)}\t{count}\t{locus}\n')
             else:
                 info.write(f'{sid}\t{len(seq)}\t0\n')
-    print(f'[Output] Filled genome stat write to: {filledstatfile}')
+    logger.info(f'[Output] Filled genome stat write to: {filledstatfile}')
     
     # make plot
     if noplot != True:
         agpfile = f'tmp/{prefix}.genome.agp'
-        quartet_util.agpGap(filledfastafile, agpfile)
-        quartet_util.drawgenome(agpfile, f'{prefix}.genome.filled')
+        util.agpGap(filledfastafile, agpfile)
+        util.drawgenome(agpfile, f'{prefix}.genome.filled')
 
 ### RUN ###
-if __name__ == '__main__':
+def main(inarg=None):
     # Argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='GapFiller: long-reads based gapfilling tool',
+        prog='quartet GapFiller',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    
     parser.add_argument('-d', dest='draft_genome',required=True, help='(*Required) Draft genome file to be filled, FASTA format.')
     parser.add_argument('-g', dest='gapcloser_contig', nargs='+', required=True, help='(*Required) All contigs files (accept multiple file) used to fill gaps, FASTA format.')
     parser.add_argument('-f', dest='flanking_len', type=int, default=5000, help='The flanking seq length of gap used to anchor (bp), default: 5000')
@@ -235,37 +308,54 @@ if __name__ == '__main__':
     parser.add_argument('-t', dest='threads', default='1', help='Use number of threads, default: 1')
     parser.add_argument('--enablejoin', dest='enablejoin', action='store_true', default=False, help='Enable join mode to close the gaps. (Unstable)')
     parser.add_argument('--joinonly', dest='joinonly', action='store_true', default=False, help='Use only join mode without fill, should be used with --enablejoin.')
+    parser.add_argument('--join-min-overlap', dest='join_min_overlap', type=int, default=50, help='The min overlap length required for join on draft genome components (bp), default: 50')
+    parser.add_argument('--join-min-identity', dest='join_min_identity', type=float, default=30, help='The min overlap identity required for join on draft genome components (%%), default: 30')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true', default=False, help='Overwrite existing alignment file instead of reuse.')
     parser.add_argument('--minimapoption', dest='minimapoption', default='-x asm5', help='Pass additional parameters to minimap2 program, default: -x asm5')
     parser.add_argument('--noplot', dest='noplot', action='store_true', default=False, help='Skip all ploting.')
 
-    # parse input paramater
-    draftgenomefile = quartet_util.decompress(parser.parse_args().draft_genome)
-    gapclosercontigfilelist = [quartet_util.decompress(x) for x in parser.parse_args().gapcloser_contig]
-    flanking = int(parser.parse_args().flanking_len)
-    minalignmentlength2 = int(parser.parse_args().min_alignment_length)
+    args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
+
+    # parse input parameters
+    draftgenomefile = util.decompress(args.draft_genome)
+    gapclosercontigfilelist = [util.decompress(x) for x in args.gapcloser_contig]
+    flanking = int(args.flanking_len)
+    minalignmentlength2 = int(args.min_alignment_length)
     if minalignmentlength2 > flanking:
-        print('[Error] min_alignment_length should be less than flanking_len.')
-        sys.exit(0)
-    minalignmentidentity2 = float(parser.parse_args().min_alignment_identity) / 100
+        logger.error('min_alignment_length should be less than flanking_len.')
+        sys.exit(1)
+    minalignmentidentity2 = float(args.min_alignment_identity) / 100
     if minalignmentidentity2 < 0 or minalignmentidentity2 > 1:
-        print('[Error] min_alignment_identity should be within 0~100.')
-        sys.exit(0)
-    maxfillinglen = int(parser.parse_args().max_filling_len)
-    prefix = parser.parse_args().prefix
-    threads = parser.parse_args().threads
-    minimapoption = parser.parse_args().minimapoption + f' -t {threads}'
-    overwrite = parser.parse_args().overwrite
-    aligner = parser.parse_args().aligner
-    enablejoin = parser.parse_args().enablejoin
-    joinonly = parser.parse_args().joinonly
-    noplot = parser.parse_args().noplot
+        logger.error('min_alignment_identity should be within 0~100.')
+        sys.exit(1)
+    maxfillinglen = int(args.max_filling_len)
+    prefix = args.prefix
+    threads = args.threads
+    minimapoption = args.minimapoption + f' -t {threads}'
+    overwrite = args.overwrite
+    aligner = args.aligner
+    enablejoin = args.enablejoin
+    joinonly = args.joinonly
+    joinminoverlap = int(args.join_min_overlap)
+    if joinminoverlap < 1:
+        logger.error('join_min_overlap should be at least 1.')
+        sys.exit(1)
+    joinminidentity = float(args.join_min_identity) / 100
+    if joinminidentity < 0 or joinminidentity > 1:
+        logger.error('join_min_identity should be within 0~100.')
+        sys.exit(1)
+    noplot = args.noplot
 
     # check prerequisites
-    quartet_util.check_prerequisite([aligner])
+    util.check_prerequisite([aligner])
 
     # run
-    args = [draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
-            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, noplot, aligner]
-    print(f'[Info] Paramater: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, joinonly={joinonly}, noplot={noplot}')
-    quartet_util.run(GapFiller, args)
+    logger.info(f'Parameters: draftgenomefile={draftgenomefile}, gapclosercontigfilelist={gapclosercontigfilelist}, '+
+                f'flanking={flanking}, minalignmentlength2={minalignmentlength2}, minalignmentidentity2={minalignmentidentity2}, '+
+                f'maxfillinglen={maxfillinglen}, aligner={aligner}, prefix={prefix}, threads={threads}, '+
+                f'minimapoption={minimapoption}, overwrite={overwrite}, enablejoin={enablejoin}, '+
+                f'joinonly={joinonly}, joinminoverlap={joinminoverlap}, joinminidentity={joinminidentity}, noplot={noplot}')
+    GapFiller(draftgenomefile, gapclosercontigfilelist, flanking, minalignmentlength2, minalignmentidentity2, 
+            maxfillinglen, prefix, threads, minimapoption, overwrite, enablejoin, joinonly, 
+            joinminoverlap, joinminidentity, noplot, aligner)
+    logger.info('Done.')

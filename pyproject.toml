@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quarTeT"
+version = "1.3.0"
+description = "A telomere-to-telomere toolkit for gap-free genome assembly and centromeric repeat identification"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {text = "MIT"}
+authors = [
+    {name = "Yunzhi Lin", email = "linyunzhi20@gmail.com"}
+]
+keywords = ["genome", "assembly", "telomere", "centromere", "bioinformatics"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = []
+
+[project.optional-dependencies]
+bioconda = [
+    "minimap2>=2.24",
+    "unimap>=0.1",
+    "mummer4>=4.0.0rc1",
+    "trf>=4.09",
+    "cd-hit>=4.8.1",
+    "blast>=2.11.0",
+    "tidk>=0.2.31",
+    "gnuplot>=5.4",
+    "r-base>=3.5.0",
+    "r-rideogram>=0.2.2",
+    "r-ggplot2>=3.4.4",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/aaranyue/quarTeT"
+"Bug Tracker" = "https://github.com/aaranyue/quarTeT/issues"
+"Documentation" = "https://github.com/aaranyue/quarTeT/blob/main/README.md"
+"Source Code" = "https://github.com/aaranyue/quarTeT"
+
+[project.scripts]
+quartet = "quartet.main:main"
+
+[tool.setuptools]
+packages = ["quartet"]
