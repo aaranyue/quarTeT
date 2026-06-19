@@ -296,9 +296,9 @@ convertSVG("{outprefix}.svg", file = "{outprefix}", device = "png")'''
     else:
         logger.info(f'[Output] Chromosome plot write to: {outprefix}.png')
     
-def runsub(cmd, name, successcode=0, exitonerror=True):
+def runsub(cmd, name, successcode=[0], exitonerror=True):
     cmdr = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    if cmdr.returncode != successcode:
+    if cmdr.returncode not in successcode:
         error_msg = (
             f'Unexpected error occurred in {name}:\n'
             f'cmd: {cmdr.args}\n'
