@@ -9,11 +9,12 @@ Task include:
 
 ## Version Change log
 1.3.0
-- Breaking: new entry point `quartet` instead of `python3 {path}/quartet.py` to support conda/pip install.
-- Add `--notelo` option for AssemblyMapper.
+- **Breaking**: entry point change to `quartet` instead of `python3 {path}/quartet.py`: quartet is now a python module instead of separated scripts, and require pip to install.
+- Add `--notelo` option for AssemblyMapper to disable telomere-assist ordering and orientation.
 - Improve `join` mode of GapFiller, thanks to BRNiu, [PR #66](https://github.com/aaranyue/quarTeT/pull/66)
-- Change behavior with gzip file: create new file instead of replace.
-- Improve logging system instead of raw print / delay output.
+- Change behavior with gzip file: create new file instead of replace. Known issue: cannot recognize soft link to gzip file.
+- Improve logging system: import logging instead of print.
+- quarTeT is now available in bioconda.
 
 1.2.5
 - Add new '--groupcontig' option for AssemblyMapper. Adding this option will output a folder containing contigs grouped by reference sequence (will group unassigned contigs into one).
@@ -122,9 +123,13 @@ conda create -n quartet --channel conda-forge --channel bioconda python minimap2
 ```
 
 #### Installation
-Via conda (A kind soul have uploaded v1.2.5; v1.3.0 is pending):
+Via Conda/Mamba/Docker/Singularity:
+(Docker/Singularity pull need to specify `<version>--<hash>`, availble at [here](https://quay.io/repository/biocontainers/quartet-bio?tab=tags))
 ```
 conda install --channel conda-forge --channel bioconda quartet-bio
+mamba install --channel conda-forge --channel bioconda quartet-bio
+docker pull quay.io/biocontainers/quartet-bio:<version>--<hash>
+singularity pull docker://quay.io/biocontainers/quartet-bio:<version>--<hash>
 ```
 
 Manual install:
