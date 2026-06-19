@@ -354,8 +354,8 @@ def main(inarg=None):
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
     
     # parse input parameters
-    refgenomefile = util.decompress(args.reference_genome)
-    qryfile = util.decompress(args.contigs)
+    refgenomefile = args.reference_genome
+    qryfile = args.contigs
     mincontiglength = int(args.min_contig_length)
     minalignmentlength = int(args.min_alignment_length)
     minalignmentidentity = float(args.min_alignment_identity) / 100

@@ -2,6 +2,7 @@
 import sys
 import subprocess
 import os
+import gzip
 import re
 import logging
 from collections import defaultdict
@@ -20,19 +21,22 @@ def check_prerequisite(prerequisitelist: list):
         logger.error(f'Please make sure these software have been installed, exported to $PATH, and authorized executable.')
         sys.exit(1)
 
-def decompress(file):
-    if 'gzip compressed data' in subprocess.run(f'file {file}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode():
-        newfile = '.'.join(file.split('.')[:-1])
-        subprocess.run(f'gzip -dc {file} > {newfile}', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        return newfile
+def openread(file):
+    # detect gzip by magic bytes to support gzipped file without creating temporary files
+    try:
+        with open(file, 'rb') as fh:
+            magic = fh.read(2)
+    except Exception:
+        magic = b''
+    if magic == b'\x1f\x8b':
+        return gzip.open(file, 'rt')
     else:
-        return file
+        return open(file, 'r')
 
 def readFastaAsDict(fastafile):
     fastaDict = {}
-    fil = open(fastafile, 'r')
-    allline = fil.read()
-    fil.close()
+    with openread(fastafile) as fil:
+        allline = fil.read()
     eachidseq = allline.split('>')
     for idseq in eachidseq:
         if idseq != '':
