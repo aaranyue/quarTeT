@@ -8,6 +8,10 @@ Task include:
 - [CentroMiner](#CentroMiner): centromere candidate prediction
 
 ## Version Change log
+1.3.1
+- Change behavior with gzip file: directly read, no longer decompress. Also fix the bug that cannot recognize soft link to gzip file.
+- Fix a bug that CentroMiner report TRF fail on success (TRF v4.09 return 1 on success, and TRF v4.10 return 0)
+
 1.3.0
 - **Breaking**: entry point change to `quartet` instead of `python3 {path}/quartet.py`: quartet is now a python module instead of separated scripts, and require pip to install.
 - Add `--notelo` option for AssemblyMapper to disable telomere-assist ordering and orientation.
