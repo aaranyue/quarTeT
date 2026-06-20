@@ -98,7 +98,7 @@ def CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, max
 
         # read TE and gene annotation
         if tegfffile != None:
-            with util.openread(tegfffile, 'r') as te:
+            with util.openread(tegfffile) as te:
                 teintervals = []
                 for line in te:
                     if line.startswith('#') or len(line.split()) < 9:
@@ -107,7 +107,7 @@ def CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, max
                         teintervals.append([int(line.split()[3]), int(line.split()[4])])
                         
         if genegfffile != None:
-            with util.openread(genegfffile, 'r') as ge:
+            with util.openread(genegfffile) as ge:
                 geintervals = []
                 for line in ge:
                     if line.startswith('#') or len(line.split()) < 9:
