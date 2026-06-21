@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.3.0
+# Last modified: V1.3.1
 
 import sys
 import os
@@ -166,7 +166,7 @@ def main(inarg=None):
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
     
     # parse input parameters
-    genomefile = util.decompress(args.genome)
+    genomefile = args.genome
     clade = args.clade
     minrepeattimes = args.min_repeat_times
     prefix = args.prefix

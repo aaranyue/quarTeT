@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.3.0
+# Last modified: V1.3.1
 
 import sys
 import argparse
@@ -317,8 +317,8 @@ def main(inarg=None):
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
 
     # parse input parameters
-    draftgenomefile = util.decompress(args.draft_genome)
-    gapclosercontigfilelist = [util.decompress(x) for x in args.gapcloser_contig]
+    draftgenomefile = args.draft_genome
+    gapclosercontigfilelist = [x for x in args.gapcloser_contig]
     flanking = int(args.flanking_len)
     minalignmentlength2 = int(args.min_alignment_length)
     if minalignmentlength2 > flanking:

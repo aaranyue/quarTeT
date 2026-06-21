@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# Last modified: V1.3.0
+# Last modified: V1.3.1
 
 import sys
 from logging.config import dictConfig
 
 USAGE = '''quarTeT: Telomere-to-telomere Toolkit
-version 1.3.0
+version 1.3.1
 
 Usage: quartet <module> <parameters>
 

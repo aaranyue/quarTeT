@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: V1.3.0
+# Last modified: V1.3.1
 
 import subprocess
 import os
@@ -41,7 +41,8 @@ def CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, max
         datfile = f'tmp/trfdat/{prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat'
         splitchrfastafile = f'tmp/splitchr/{prefix}.{Chr}.fasta'
         if not os.path.exists(datfile) or overwrite == True:
-            util.runsub(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', 'trf', 1, False)
+            # TRF v4.09 return 1 on success, but v4.10 return 0 
+            util.runsub(f'trf {splitchrfastafile} {match} {mismatch} {delta} {PctMatch} {PctIndel} {minscore} {maxperiod} -l {max_TR_length} -d -h', 'trf', [0,1], False)
         else:
             logger.warning(f'Reuse existing file {datfile}')
         subprocess.run(f'mv -t tmp/trfdat -f {prefix}.{Chr}.fasta.{match}.{mismatch}.{delta}.{PctMatch}.{PctIndel}.{minscore}.{maxperiod}.dat', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -97,7 +98,7 @@ def CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, max
 
         # read TE and gene annotation
         if tegfffile != None:
-            with open(tegfffile, 'r') as te:
+            with util.openread(tegfffile) as te:
                 teintervals = []
                 for line in te:
                     if line.startswith('#') or len(line.split()) < 9:
@@ -106,7 +107,7 @@ def CentroMiner(genomefile, tegfffile, genegfffile, minperiod, maxperiod, e, max
                         teintervals.append([int(line.split()[3]), int(line.split()[4])])
                         
         if genegfffile != None:
-            with open(genegfffile, 'r') as ge:
+            with util.openread(genegfffile) as ge:
                 geintervals = []
                 for line in ge:
                     if line.startswith('#') or len(line.split()) < 9:
@@ -245,10 +246,10 @@ def main(inarg=None):
     args = parser.parse_args() if inarg is None else parser.parse_args(inarg)
 
     # parse input parameters
-    genomefile = util.decompress(args.genome_fasta)
+    genomefile = args.genome_fasta
 
-    tegfffile = util.decompress(args.TE)
-    genegfffile = util.decompress(args.gene)
+    tegfffile = args.TE
+    genegfffile = args.gene
 
     minperiod = int(args.min_period)
     maxperiod = int(args.max_period)
