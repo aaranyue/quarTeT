@@ -1,7 +1,7 @@
-# quarTeT: Telomere-to-telomere Toolkit
-quarTeT is a collection of tools for T2T genome assembly and basic analysis in automatic workflow.
+# quarTeT: Telomere-To-Telomere Toolkit
+quarTeT is a collection of tools designed for T2T genome assembly and automated genomic analyses.
 
-Task include:
+The toolkit includes four main modules:
 - [AssemblyMapper](#AssemblyMapper): reference-guided genome assembly
 - [GapFiller](#GapFiller): long-reads based gap filling
 - [TeloExplorer](#TeloExplorer): telomere identification
